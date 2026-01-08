@@ -1,3 +1,6 @@
+import pandas as pd
+from io import BytesIO
+from fastapi.responses import StreamingResponse
 import calendar
 from sqlalchemy import extract
 from fastapi import FastAPI, Depends, HTTPException
@@ -363,3 +366,46 @@ def get_analysis(month: int, year: int, db: Session = Depends(get_db)):
         advice = f"🚀 ¡Impresionante! Estás ahorrando el {savings_rate:.0f}% de lo que ganas. Eres un máster de las finanzas. Considera mover el excedente a una cuenta de Inversión."
 
     return {"message": advice}
+
+# --- PEGAR AL FINAL DE backend/main.py ---
+
+@app.get("/export")
+def export_data(db: Session = Depends(get_db)):
+    # 1. Obtener datos cruzando tablas (Joins)
+    # Queremos el NOMBRE de la categoría y cuenta, no solo el ID
+    results = db.query(
+        Transaction.date,
+        Transaction.description,
+        Transaction.amount,
+        Category.name.label("category_name"),
+        Category.type.label("category_type"),
+        Account.name.label("account_name")
+    ).join(Category, Transaction.category_id == Category.id)\
+     .join(Account, Transaction.account_id == Account.id)\
+     .all()
+
+    # 2. Convertir a lista de diccionarios (Formato para Pandas)
+    data = []
+    for row in results:
+        data.append({
+            "Fecha": row.date,
+            "Descripción": row.description,
+            "Monto": row.amount,
+            "Tipo": "Ingreso" if row.category_type == "Income" else "Gasto",
+            "Categoría": row.category_name,
+            "Cuenta": row.account_name
+        })
+
+    # 3. Crear DataFrame de Pandas
+    df = pd.DataFrame(data)
+
+    # 4. Guardar en memoria como Excel (sin crear archivo en disco)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name="Movimientos")
+    
+    output.seek(0)
+
+    # 5. Enviar respuesta como descarga
+    headers = {"Content-Disposition": "attachment; filename=mis_finanzas.xlsx"}
+    return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers=headers)

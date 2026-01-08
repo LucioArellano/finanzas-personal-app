@@ -154,6 +154,11 @@ export default function Home() {
 
   const totalBalance = accounts.reduce((acc, curr) => acc + curr.balance, 0);
 
+  const downloadExcel = () => {
+    // Al redirigir al navegador a esta URL, iniciará la descarga automáticamente
+    window.location.href = "http://127.0.0.1:8000/export";
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-700 pb-12">
       <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
@@ -177,6 +182,9 @@ export default function Home() {
               <p className="text-xs text-gray-400 uppercase">Patrimonio Total</p>
               <p className="font-bold text-gray-800 text-lg">${totalBalance.toLocaleString()}</p>
             </div>
+            {/* Botón Excel */}
+            <button onClick={downloadExcel} className="bg-green-100 hover:bg-green-200 text-green-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Descargar historial en Excel">
+    📊 <span className="hidden md:inline">Excel</span> </button>
             <Link href="/settings" className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition">⚙️ Ajustes</Link>
           </div>
         </div>

@@ -142,6 +142,7 @@
     --color-red-500: #fb2c36;
     --color-red-700: #bf000f;
     --color-green-50: #f0fdf4;
+    --color-green-100: #dcfce7;
     --color-green-200: #b9f8cf;
     --color-green-500: #00c758;
     --color-green-700: #008138;
@@ -213,6 +214,7 @@
       --color-red-500: lab(55.4814% 75.0732 48.8528);
       --color-red-700: lab(40.4273% 67.2623 53.7441);
       --color-green-50: lab(98.1563% -5.60117 2.75913);
+      --color-green-100: lab(96.186% -13.8464 6.52362);
       --color-green-200: lab(92.4222% -26.4702 12.9427);
       --color-green-500: lab(70.5521% -66.5147 45.8072);
       --color-green-700: lab(47.0329% -47.0239 31.4788);
@@ -670,10 +672,6 @@
     max-width: var(--container-7xl);
   }
 
-  .max-w-\[100px\] {
-    max-width: 100px;
-  }
-
   .min-w-0 {
     min-width: calc(var(--spacing) * 0);
   }
@@ -905,6 +903,10 @@
 
   .bg-green-50 {
     background-color: var(--color-green-50);
+  }
+
+  .bg-green-100 {
+    background-color: var(--color-green-100);
   }
 
   .bg-purple-100 {
@@ -1392,6 +1394,12 @@
   }
 
   @media (hover: hover) {
+    .hover\:bg-green-200:hover {
+      background-color: var(--color-green-200);
+    }
+  }
+
+  @media (hover: hover) {
     .hover\:bg-purple-50:hover {
       background-color: var(--color-purple-50);
     }
@@ -1480,6 +1488,12 @@
   @media (min-width: 48rem) {
     .md\:hidden {
       display: none;
+    }
+  }
+
+  @media (min-width: 48rem) {
+    .md\:inline {
+      display: inline;
     }
   }
 

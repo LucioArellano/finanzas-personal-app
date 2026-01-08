@@ -1,22 +1,25 @@
-# backend/database.py
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
-# --- CONFIGURACIÓN DE LA BASE DE DATOS ---
-# Usaremos SQLite por ahora (se creará un archivo 'finanzas.db' en tu carpeta)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./finanzas.db"
+# 1. Buscamos si existe una URL de base de datos en la nube
+# (Render nos dará esta URL automáticamente cuando despleguemos)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Si luego usas PostgreSQL, solo cambiarás la línea de arriba por algo como:
-# SQLALCHEMY_DATABASE_URL = "postgresql://user:password@localhost/dbname"
+# 2. Lógica de selección
+if DATABASE_URL:
+    # --- CONFIGURACIÓN PARA LA NUBE (PostgreSQL) ---
+    # Fix pequeño: SQLAlchemy a veces necesita que diga 'postgresql' en vez de 'postgres'
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    
+    engine = create_engine(DATABASE_URL)
+else:
+    # --- CONFIGURACIÓN LOCAL (SQLite) ---
+    SQLITE_URL = "sqlite:///./finance.db"
+    engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
 
-# El motor que hace la magia
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-
-# La sesión para hablar con la base de datos
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# La clase base para nuestros modelos
 Base = declarative_base()

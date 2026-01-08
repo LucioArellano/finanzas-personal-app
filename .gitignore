@@ -1,0 +1,17 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# --- Node / Frontend ---
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+.DS_Store
+
+# --- Base de datos (Opcional) ---
+# Si quieres guardar tus datos actuales en GitHub, borra la linea de abajo.
+# Si prefieres que quien baje el código empiece desde cero, déjala.
+*.db
+*.sqlite

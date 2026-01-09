@@ -40,6 +40,34 @@ const TRANSLATIONS: Record<string, string> = {
 
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
+// --- LISTA COMPLETA DE ICONOS ---
+const CATEGORY_ICONS = [
+  { icon: "🍕", label: "Comida / Restaurante" },
+  { icon: "🛒", label: "Supermercado" },
+  { icon: "🏠", label: "Hogar / Renta" },
+  { icon: "💡", label: "Servicios (Luz/Agua)" },
+  { icon: "🌐", label: "Internet / Teléfono" },
+  { icon: "🚕", label: "Transporte" },
+  { icon: "⛽", label: "Gasolina" },
+  { icon: "💊", label: "Salud / Farmacia" },
+  { icon: "🏋️", label: "Deporte / Gym" },
+  { icon: "🎮", label: "Ocio / Diversión" },
+  { icon: "🎬", label: "Cine / Streaming" },
+  { icon: "🛍️", label: "Compras" },
+  { icon: "👕", label: "Ropa" },
+  { icon: "🎓", label: "Educación" },
+  { icon: "🎁", label: "Regalos" },
+  { icon: "🐾", label: "Mascotas" },
+  { icon: "✈️", label: "Viajes" },
+  { icon: "🔧", label: "Mantenimiento" },
+  { icon: "💰", label: "Sueldo / Ingreso" },
+  { icon: "💼", label: "Negocio / Freelance" },
+  { icon: "📈", label: "Inversiones" },
+  { icon: "💳", label: "Pagos de Tarjeta/Deudas" },
+  { icon: "🏦", label: "Transferencias" },
+  { icon: "💸", label: "Otros" }
+];
+
 export default function Home() {
   const API_URL = "https://finanzas-api-y9ke.onrender.com";  
   
@@ -78,7 +106,7 @@ export default function Home() {
   const [desc, setDesc] = useState("");
   const [selCat, setSelCat] = useState("");
   const [selAcc, setSelAcc] = useState("");
-  // NUEVO: Estado para la fecha de la transacción (individual)
+  // Estado para la fecha de la transacción (individual)
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]); 
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -427,7 +455,7 @@ export default function Home() {
                             const isExpense = cat?.type === "Expense";
                             // Parsear fecha local para mostrar día correcto
                             const txDateObj = new Date(tx.date);
-                            // Ajuste visual simple para fecha (opcional)
+                            // Ajuste visual simple para fecha
                             const dateStr = txDateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 
                             return (
@@ -507,14 +535,16 @@ export default function Home() {
                 </div>
                 <div>
                     <label className="text-xs font-bold text-gray-400 uppercase">Icono</label>
-                    <select className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none" value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)}>
-                        <option value="🍕">🍕 Comida</option>
-                        <option value="🚕">🚕 Transporte</option>
-                        <option value="🏠">🏠 Hogar</option>
-                        <option value="💊">💊 Salud</option>
-                        <option value="🎮">🎮 Ocio</option>
-                        <option value="💸">💸 Otros</option>
-                        <option value="💰">💰 Sueldo</option>
+                    <select 
+                        className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none" 
+                        value={newCatIcon} 
+                        onChange={e => setNewCatIcon(e.target.value)}
+                    >
+                        {CATEGORY_ICONS.map((item) => (
+                            <option key={item.icon} value={item.icon}>
+                                {item.icon} {item.label}
+                            </option>
+                        ))}
                     </select>
                 </div>
             </div>

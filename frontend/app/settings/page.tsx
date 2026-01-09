@@ -49,9 +49,9 @@ export default function Settings() {
     try {
       // Agregamos la llamada a /goals/
       const [resCat, resAcc, resGoals] = await Promise.all([
-        axios.get("http://https://finanzas-api-y9ke.onrender.com/categories/"),
-        axios.get("http://https://finanzas-api-y9ke.onrender.com/accounts/"),
-        axios.get("http://https://finanzas-api-y9ke.onrender.com/goals/") 
+        axios.get("https://finanzas-api-y9ke.onrender.com/categories/"),
+        axios.get("https://finanzas-api-y9ke.onrender.com/accounts/"),
+        axios.get("https://finanzas-api-y9ke.onrender.com/goals/") 
       ]);
       setCategories(resCat.data);
       setAccounts(resAcc.data);
@@ -67,7 +67,7 @@ export default function Settings() {
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post("http://https://finanzas-api-y9ke.onrender.com/accounts/", { name: accName, type: accType, balance: parseFloat(accBalance) });
+      await axios.post("https://finanzas-api-y9ke.onrender.com/accounts/", { name: accName, type: accType, balance: parseFloat(accBalance) });
       alert("✅ Cuenta creada");
       setAccName(""); setAccBalance("0");
       fetchData();
@@ -77,7 +77,7 @@ export default function Settings() {
   const handleDeleteAccount = async (id: number) => {
     if(!confirm("¿Borrar cuenta? Solo se puede si no tiene movimientos.")) return;
     try {
-      await axios.delete(`http://https://finanzas-api-y9ke.onrender.com/accounts/${id}`);
+      await axios.delete(`https://finanzas-api-y9ke.onrender.com/accounts/${id}`);
       fetchData();
     } catch (error) { alert("❌ No se puede borrar: Tiene transacciones asociadas."); }
   };
@@ -86,7 +86,7 @@ export default function Settings() {
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post("http://https://finanzas-api-y9ke.onrender.com/categories/", { name: catName, type: catType, icon: catIcon, budget_limit: 0 });
+      await axios.post("https://finanzas-api-y9ke.onrender.com/categories/", { name: catName, type: catType, icon: catIcon, budget_limit: 0 });
       setCatName(""); setShowIconPicker(false);
       fetchData();
     } catch (error) { alert("Error al crear categoría"); }
@@ -95,7 +95,7 @@ export default function Settings() {
   const handleDeleteCategory = async (id: number) => {
     if(!confirm("¿Borrar categoría?")) return;
     try {
-      await axios.delete(`http://https://finanzas-api-y9ke.onrender.com/categories/${id}`);
+      await axios.delete(`https://finanzas-api-y9ke.onrender.com/categories/${id}`);
       fetchData();
     } catch (error) { alert("❌ No se puede borrar: Tiene gastos asociados."); }
   };
@@ -104,7 +104,7 @@ export default function Settings() {
   const handleCreateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post("http://https://finanzas-api-y9ke.onrender.com/goals/", { 
+      await axios.post("https://finanzas-api-y9ke.onrender.com/goals/", { 
         name: goalName, 
         target_amount: parseFloat(goalTarget), 
         current_amount: 0, 
@@ -119,7 +119,7 @@ export default function Settings() {
   const handleDeleteGoal = async (id: number) => {
     if(!confirm("¿Borrar esta meta de ahorro?")) return;
     try {
-      await axios.delete(`http://https://finanzas-api-y9ke.onrender.com/goals/${id}`);
+      await axios.delete(`https://finanzas-api-y9ke.onrender.com/goals/${id}`);
       fetchData();
     } catch (error) { alert("Error al eliminar meta"); }
   };

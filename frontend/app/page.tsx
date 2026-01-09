@@ -54,7 +54,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [analysis, setAnalysis] = useState("");
 
-  // --- ESTADOS MODALES (NUEVO) ---
+  // --- ESTADOS MODALES ---
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   
@@ -67,7 +67,7 @@ export default function Home() {
   const [newCatType, setNewCatType] = useState("Expense");
   const [newCatIcon, setNewCatIcon] = useState("🏷️");
 
-  // ESTADO FECHA
+  // ESTADO FECHA (FILTRO GLOBAL)
   const [filterDate, setFilterDate] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -78,6 +78,8 @@ export default function Home() {
   const [desc, setDesc] = useState("");
   const [selCat, setSelCat] = useState("");
   const [selAcc, setSelAcc] = useState("");
+  // NUEVO: Estado para la fecha de la transacción (individual)
+  const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]); 
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const getDisplayDate = (isoDate: string) => {
@@ -146,7 +148,7 @@ export default function Home() {
         alert("✅ Cuenta creada con éxito");
         setShowAccountModal(false);
         setNewAccName(""); setNewAccBalance("0"); // Reset
-        fetchData(); // Recargar datos para que aparezca en la lista
+        fetchData(); 
     } catch (error) { alert("Error al crear cuenta"); }
   };
 
@@ -162,7 +164,7 @@ export default function Home() {
         alert("✅ Categoría creada con éxito");
         setShowCategoryModal(false);
         setNewCatName(""); // Reset
-        fetchData(); // Recargar datos
+        fetchData(); 
     } catch (error) { alert("Error al crear categoría (posible duplicado)"); }
   };
 
@@ -173,12 +175,15 @@ export default function Home() {
     setDesc(tx.description);
     setSelCat(tx.category_id.toString());
     setSelAcc(tx.account_id.toString());
+    // Convertir la fecha ISO (YYYY-MM-DDTHH:mm:ss) a YYYY-MM-DD para el input
+    setTxDate(tx.date.split("T")[0]); 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const cancelEditing = () => {
     setEditingId(null);
     setAmount(""); setDesc(""); setSelCat(""); setSelAcc("");
+    setTxDate(new Date().toISOString().split('T')[0]); // Reset a hoy
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -189,7 +194,8 @@ export default function Home() {
             amount: parseFloat(amount),
             description: desc,
             account_id: parseInt(selAcc),
-            category_id: parseInt(selCat)
+            category_id: parseInt(selCat),
+            date: txDate // <--- ENVIAMOS LA FECHA SELECCIONADA
         };
 
         if (editingId) {
@@ -201,6 +207,7 @@ export default function Home() {
         }
 
       setAmount(""); setDesc(""); 
+      setTxDate(new Date().toISOString().split('T')[0]); // Reset fecha
       fetchData(); 
     } catch (error) { alert("Error al guardar"); }
   };
@@ -260,7 +267,7 @@ export default function Home() {
             </div>
         </div>
 
-        {/* --- ACCIONES RÁPIDAS (NUEVO) --- */}
+        {/* --- ACCIONES RÁPIDAS --- */}
         <div className="flex flex-wrap gap-4">
             <button onClick={() => { setNewAccType("Cash"); setShowAccountModal(true); }} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition transform active:scale-95">
                 💳 Nueva Cuenta
@@ -311,10 +318,18 @@ export default function Home() {
                     </h3>
                     
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="text-xs font-bold text-gray-400 uppercase">Monto</label>
-                            <input type="number" placeholder="$0.00" className="w-full p-3 bg-gray-50 rounded-xl border-none outline-none focus:ring-2 focus:ring-blue-500 transition font-bold text-lg text-gray-700" value={amount} onChange={e => setAmount(e.target.value)} required />
+                        {/* INPUTS DE MONTO Y FECHA AGRUPADOS */}
+                        <div className="grid grid-cols-2 gap-2">
+                             <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase">Monto</label>
+                                <input type="number" placeholder="$0.00" className="w-full p-3 bg-gray-50 rounded-xl border-none outline-none focus:ring-2 focus:ring-blue-500 transition font-bold text-lg text-gray-700" value={amount} onChange={e => setAmount(e.target.value)} required />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase">Fecha</label>
+                                <input type="date" className="w-full p-3 bg-gray-50 rounded-xl border-none outline-none focus:ring-2 focus:ring-blue-500 transition text-sm text-gray-700 font-medium" value={txDate} onChange={e => setTxDate(e.target.value)} required />
+                            </div>
                         </div>
+
                         <div>
                             <label className="text-xs font-bold text-gray-400 uppercase">Concepto</label>
                             <input type="text" placeholder="Ej: Supermercado" className="w-full p-3 bg-gray-50 rounded-xl border-none outline-none focus:ring-2 focus:ring-blue-100 transition text-sm" value={desc} onChange={e => setDesc(e.target.value)} required />
@@ -407,9 +422,14 @@ export default function Home() {
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                     <h3 className="font-bold text-gray-800 mb-4">⏱️ Historial Mes</h3>
                     <div className="space-y-4">
-                        {transactions.slice().reverse().map(tx => {
+                        {transactions.slice().map(tx => {
                             const cat = categories.find(c => c.id === tx.category_id);
                             const isExpense = cat?.type === "Expense";
+                            // Parsear fecha local para mostrar día correcto
+                            const txDateObj = new Date(tx.date);
+                            // Ajuste visual simple para fecha (opcional)
+                            const dateStr = txDateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+
                             return (
                                 <div key={tx.id} className={`flex justify-between items-center group py-2 border-b border-gray-50 last:border-0 ${editingId === tx.id ? "bg-blue-50 rounded px-2 -mx-2" : ""}`}>
                                     <div className="flex items-center gap-3 overflow-hidden">
@@ -418,7 +438,7 @@ export default function Home() {
                                         </div>
                                         <div className="min-w-0">
                                             <p className="font-bold text-gray-700 text-xs truncate">{tx.description}</p>
-                                            <p className="text-[10px] text-gray-400">{new Date(tx.date).toLocaleDateString()}</p>
+                                            <p className="text-[10px] text-gray-400 capitalize">{dateStr}</p>
                                         </div>
                                     </div>
                                     <div className="text-right flex items-center gap-2">

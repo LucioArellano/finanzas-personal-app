@@ -13,14 +13,11 @@ from datetime import datetime
 from typing import Optional
 
 # --- 1. CONFIGURACIÓN DE BASE DE DATOS ---
-# Intentar leer la variable de Render. Si no existe, usar SQLite local.
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./finanzas.db")
 
-# Corrección para versiones nuevas de SQLAlchemy (postgres:// -> postgresql://)
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Argumentos de conexión: SQLite necesita check_same_thread, Postgres NO.
 connect_args = {}
 if "sqlite" in DATABASE_URL:
     connect_args = {"check_same_thread": False}
@@ -83,6 +80,7 @@ class TransactionCreate(BaseModel):
     description: str
     account_id: int
     category_id: int
+    date: Optional[str] = None # <--- CAMBIO: Aceptamos fecha como texto opcional
 
 class GoalCreate(BaseModel):
     name: str
@@ -126,17 +124,14 @@ def read_accounts(db: Session = Depends(get_db)):
 
 @app.delete("/accounts/{account_id}")
 def delete_account(account_id: int, db: Session = Depends(get_db)):
-    # 1. Buscar la cuenta
     acc = db.query(Account).filter(Account.id == account_id).first()
     if not acc:
         raise HTTPException(status_code=404, detail="Cuenta no encontrada")
     
-    # 2. SEGURIDAD: Verificar si tiene transacciones
     tx_check = db.query(Transaction).filter(Transaction.account_id == account_id).first()
     if tx_check:
         raise HTTPException(status_code=400, detail="No se puede borrar: Tiene movimientos asociados")
 
-    # 3. Borrar
     db.delete(acc)
     db.commit()
     return {"message": "Cuenta eliminada"}
@@ -144,7 +139,6 @@ def delete_account(account_id: int, db: Session = Depends(get_db)):
 # --- CATEGORÍAS ---
 @app.post("/categories/")
 def create_category(category: CategoryCreate, db: Session = Depends(get_db)):
-    # Evitar duplicados de nombre
     existing = db.query(Category).filter(Category.name == category.name).first()
     if existing:
         raise HTTPException(status_code=400, detail="La categoría ya existe")
@@ -166,17 +160,14 @@ def read_categories(db: Session = Depends(get_db)):
 
 @app.delete("/categories/{category_id}")
 def delete_category(category_id: int, db: Session = Depends(get_db)):
-    # 1. Buscar categoría
     cat = db.query(Category).filter(Category.id == category_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
     
-    # 2. Verificar si tiene transacciones hijas
     tx_check = db.query(Transaction).filter(Transaction.category_id == category_id).first()
     if tx_check:
         raise HTTPException(status_code=400, detail="No se puede borrar: Tiene gastos asociados")
 
-    # 3. Borrar
     db.delete(cat)
     db.commit()
     return {"message": "Categoría eliminada"}
@@ -196,11 +187,25 @@ def create_transaction(tx: TransactionCreate, db: Session = Depends(get_db)):
     else:
         account.balance += tx.amount
 
+    # --- LÓGICA DE FECHA (CAMBIO IMPORTANTE) ---
+    final_date = datetime.now() # Por defecto es hoy/ahora
+    if tx.date:
+        # Si el usuario envió fecha (string YYYY-MM-DD), la convertimos
+        try:
+            # Parseamos solo la fecha
+            final_date = datetime.strptime(tx.date, "%Y-%m-%d")
+            # Opcional: Si quieres que la hora sea la actual pero el día el seleccionado:
+            # now = datetime.now()
+            # final_date = final_date.replace(hour=now.hour, minute=now.minute, second=now.second)
+        except ValueError:
+            pass # Si el formato falla, usa la fecha actual por seguridad
+
     db_tx = Transaction(
         amount=tx.amount,
         description=tx.description,
         account_id=tx.account_id,
-        category_id=tx.category_id
+        category_id=tx.category_id,
+        date=final_date # <--- Usamos la fecha calculada
     )
     db.add(db_tx)
     db.commit()
@@ -215,17 +220,13 @@ def read_transactions(
     query = db.query(Transaction)
 
     if month and year:
-        # Calcular el rango de fechas del mes seleccionado
-        # Primer día del mes
         start_date = datetime(year, month, 1)
-        # Último día del mes
         last_day = calendar.monthrange(year, month)[1]
         end_date = datetime(year, month, last_day, 23, 59, 59)
-
-        # Filtrar
         query = query.filter(Transaction.date >= start_date, Transaction.date <= end_date)
 
-    return query.all()
+    # Ordenar por fecha descendente (lo más nuevo primero)
+    return query.order_by(Transaction.date.desc()).all()
 
 @app.delete("/transactions/{transaction_id}")
 def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
@@ -236,7 +237,6 @@ def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
     account = db.query(Account).filter(Account.id == tx.account_id).first()
     category = db.query(Category).filter(Category.id == tx.category_id).first()
     
-    # Revertir saldo al borrar transacción
     if account and category:
         if category.type == "Expense":
             account.balance += tx.amount
@@ -278,22 +278,19 @@ def delete_goal(goal_id: int, db: Session = Depends(get_db)):
 
 @app.put("/transactions/{transaction_id}")
 def update_transaction(transaction_id: int, tx_update: TransactionCreate, db: Session = Depends(get_db)):
-    # 1. Buscar la transacción original
     db_tx = db.query(Transaction).filter(Transaction.id == transaction_id).first()
     if not db_tx:
         raise HTTPException(status_code=404, detail="Transacción no encontrada")
 
-    # 2. REVERTIR el saldo antiguo (Como si nunca hubiera pasado)
     old_account = db.query(Account).filter(Account.id == db_tx.account_id).first()
     old_category = db.query(Category).filter(Category.id == db_tx.category_id).first()
 
     if old_account and old_category:
         if old_category.type == "Expense":
-            old_account.balance += db_tx.amount # Devolvemos el dinero gastado
+            old_account.balance += db_tx.amount 
         else:
-            old_account.balance -= db_tx.amount # Quitamos el dinero ingresado
+            old_account.balance -= db_tx.amount 
 
-    # 3. APLICAR el nuevo saldo (Con los datos corregidos)
     new_account = db.query(Account).filter(Account.id == tx_update.account_id).first()
     new_category = db.query(Category).filter(Category.id == tx_update.category_id).first()
 
@@ -305,19 +302,23 @@ def update_transaction(transaction_id: int, tx_update: TransactionCreate, db: Se
     else:
         new_account.balance += tx_update.amount
 
-    # 4. Actualizar los datos de la transacción
     db_tx.amount = tx_update.amount
     db_tx.description = tx_update.description
     db_tx.account_id = tx_update.account_id
     db_tx.category_id = tx_update.category_id
     
+    # También permitimos actualizar la fecha si se envía
+    if tx_update.date:
+         try:
+            db_tx.date = datetime.strptime(tx_update.date, "%Y-%m-%d")
+         except:
+            pass
+
     db.commit()
     return {"message": "Transacción actualizada correctamente"}
 
 @app.get("/analysis/")
 def get_analysis(month: int, year: int, db: Session = Depends(get_db)):
-    # 1. Obtener transacciones del mes
-    # (Usamos la misma lógica de fechas que en transactions)
     if month == 12:
         next_month = 1
         next_year = year + 1
@@ -336,7 +337,6 @@ def get_analysis(month: int, year: int, db: Session = Depends(get_db)):
     if not txs:
         return {"message": "Aun no hay datos suficientes para analizar este mes. ¡Registra algo!"}
 
-    # 2. Calcular Totales
     total_income = 0
     total_expense = 0
     category_totals = {}
@@ -348,43 +348,29 @@ def get_analysis(month: int, year: int, db: Session = Depends(get_db)):
                 total_income += tx.amount
             elif cat.type == "Expense":
                 total_expense += tx.amount
-                # Agrupar gastos por categoría
                 category_totals[cat.name] = category_totals.get(cat.name, 0) + tx.amount
 
-    # 3. Generar Diagnóstico (Lógica "Inteligente")
     savings = total_income - total_expense
     savings_rate = (savings / total_income * 100) if total_income > 0 else 0
     
-    # Encontrar la categoría de mayor gasto
     top_category = max(category_totals, key=category_totals.get) if category_totals else "Ninguna"
     top_amount = category_totals[top_category] if category_totals else 0
 
     advice = ""
     
-    # Escenario A: Gastaste más de lo que ganaste
     if savings < 0:
         advice = f"⚠️ Cuidado: Este mes has gastado ${abs(savings):,.0f} más de lo que ingresaste. Tu mayor fuga de dinero fue en '{top_category}' (${top_amount:,.0f}). Intenta reducir gastos hormiga."
-    
-    # Escenario B: Ahorro bajo (0-10%)
     elif savings_rate < 10:
         advice = f"😐 Estás en números verdes, pero tu ahorro es bajo ({savings_rate:.1f}%). La categoría '{top_category}' se llevó gran parte de tu dinero. ¡Intenta subir ese porcentaje el próximo mes!"
-    
-    # Escenario C: Ahorro saludable (10-30%)
     elif 10 <= savings_rate < 30:
         advice = f"👍 ¡Buen trabajo! Ahorraste el {savings_rate:.0f}% de tus ingresos. Mantienes un buen equilibrio. Si inviertes esos ${savings:,.0f}, podrías acelerar tus metas."
-    
-    # Escenario D: Ahorro excelente (>30%)
     else:
         advice = f"🚀 ¡Impresionante! Estás ahorrando el {savings_rate:.0f}% de lo que ganas. Eres un máster de las finanzas. Considera mover el excedente a una cuenta de Inversión."
 
     return {"message": advice}
 
-# --- PEGAR AL FINAL DE backend/main.py ---
-
 @app.get("/export")
 def export_data(db: Session = Depends(get_db)):
-    # 1. Obtener datos cruzando tablas (Joins)
-    # Queremos el NOMBRE de la categoría y cuenta, no solo el ID
     results = db.query(
         Transaction.date,
         Transaction.description,
@@ -396,7 +382,6 @@ def export_data(db: Session = Depends(get_db)):
      .join(Account, Transaction.account_id == Account.id)\
      .all()
 
-    # 2. Convertir a lista de diccionarios (Formato para Pandas)
     data = []
     for row in results:
         data.append({
@@ -408,28 +393,19 @@ def export_data(db: Session = Depends(get_db)):
             "Cuenta": row.account_name
         })
 
-    # 3. Crear DataFrame de Pandas
     df = pd.DataFrame(data)
-
-    # 4. Guardar en memoria como Excel (sin crear archivo en disco)
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name="Movimientos")
     
     output.seek(0)
-
-    # 5. Enviar respuesta como descarga
     headers = {"Content-Disposition": "attachment; filename=mis_finanzas.xlsx"}
     return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers=headers)
-
-# Agrega esto en main.py (al final, antes de cerrar)
 
 @app.get("/check-db")
 def check_connection():
     from database import engine
     url_str = str(engine.url)
-    
-    # Ocultamos la contraseña por seguridad
     safe_url = url_str.split("@")[-1] if "@" in url_str else url_str
     
     if "sqlite" in url_str:

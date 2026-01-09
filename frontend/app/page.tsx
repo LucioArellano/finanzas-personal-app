@@ -192,13 +192,35 @@ export default function Home() {
             <div className="flex items-center gap-2 sm:gap-4 flex-1">
                 <span className="bg-slate-800 text-white w-8 h-8 flex items-center justify-center rounded-lg font-bold flex-shrink-0">F</span>
                 <div className="flex items-center bg-gray-100 rounded-lg p-0.5 border border-transparent hover:border-gray-300 transition">
-                    <button onClick={() => changeMonth(-1)} className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md">◀</button>
-                    <div className="relative px-1 text-center min-w-[90px] sm:min-w-[120px]">
-                        <span className="text-xs sm:text-sm font-bold capitalize truncate block">{getDisplayDate(filterDate)}</span>
-                        <input type="month" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    </div>
-                    <button onClick={() => changeMonth(1)} className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md">▶</button>
-                </div>
+    {/* Botón IZQUIERDO: Agregado 'relative z-20' */}
+    <button 
+        onClick={() => changeMonth(-1)} 
+        className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md relative z-20"
+    >
+        ◀
+    </button>
+
+    <div className="relative px-1 text-center min-w-[90px] sm:min-w-[120px]">
+        <span className="text-xs sm:text-sm font-bold capitalize truncate block">
+            {getDisplayDate(filterDate)}
+        </span>
+        {/* Input invisible (z-index por defecto o 0) */}
+        <input 
+            type="month" 
+            value={filterDate} 
+            onChange={(e) => setFilterDate(e.target.value)} 
+            className="absolute inset-0 opacity-0 cursor-pointer" 
+        />
+    </div>
+
+    {/* Botón DERECHO: Agregado 'relative z-20' */}
+    <button 
+        onClick={() => changeMonth(1)} 
+        className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md relative z-20"
+    >
+        ▶
+    </button>
+</div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
                 <div className="text-right hidden sm:block">

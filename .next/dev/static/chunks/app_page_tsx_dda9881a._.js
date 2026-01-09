@@ -51,7 +51,7 @@ const COLORS = [
 function Home() {
     _s();
     // Esta línea decide si usa la nube (cuando existe la variable) o tu PC (local)  
-    const API_URL = ("TURBOPACK compile-time value", "https://https://finanzas-api-y9ke.onrender.com/") || "http://127.0.0.1:8000";
+    const API_URL = ("TURBOPACK compile-time value", "https://https://finanzas-api-y9ke.onrender.com/") || "http://https://finanzas-api-y9ke.onrender.com";
     const [transactions, setTransactions] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [categories, setCategories] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [accounts, setAccounts] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);

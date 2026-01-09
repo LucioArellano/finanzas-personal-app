@@ -8,17 +8,18 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid 
 } from "recharts";
 
-// --- COMPONENTE MODAL (Ventana Emergente) ---
+// --- COMPONENTE MODAL (Responsivo) ---
 const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-[100] p-0 sm:p-4">
+      {/* En móvil aparece desde abajo (bottom-sheet style), en PC es central */}
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in duration-200">
         <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
           <h3 className="font-bold text-lg text-gray-800">{title}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition text-2xl leading-none">&times;</button>
         </div>
-        <div className="p-6">
+        <div className="p-6 max-h-[80vh] overflow-y-auto">
           {children}
         </div>
       </div>
@@ -26,52 +27,28 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
   );
 };
 
-// --- INTERFACES ---
+// --- INTERFACES & DATOS ---
 interface Account { id: number; name: string; type: string; balance: number; }
 interface Category { id: number; name: string; type: string; icon: string; }
 interface Transaction { id: number; amount: number; description: string; date: string; category_id: number; account_id: number; }
 interface Goal { id: number; name: string; target_amount: number; current_amount: number; icon: string; }
 
-// --- DICCIONARIO ---
 const TRANSLATIONS: Record<string, string> = {
     "Cash": "Efectivo", "Debit": "Débito", "Credit": "Crédito",
     "Savings": "Ahorro", "Investment": "Inversión", "Income": "Ingreso", "Expense": "Gasto"
 };
-
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
-// --- LISTA COMPLETA DE ICONOS ---
 const CATEGORY_ICONS = [
-  { icon: "🍕", label: "Comida / Restaurante" },
-  { icon: "🛒", label: "Supermercado" },
-  { icon: "🏠", label: "Hogar / Renta" },
-  { icon: "💡", label: "Servicios (Luz/Agua)" },
-  { icon: "🌐", label: "Internet / Teléfono" },
-  { icon: "🚕", label: "Transporte" },
-  { icon: "⛽", label: "Gasolina" },
-  { icon: "💊", label: "Salud / Farmacia" },
-  { icon: "🏋️", label: "Deporte / Gym" },
-  { icon: "🎮", label: "Ocio / Diversión" },
-  { icon: "🎬", label: "Cine / Streaming" },
-  { icon: "🛍️", label: "Compras" },
-  { icon: "👕", label: "Ropa" },
-  { icon: "🎓", label: "Educación" },
-  { icon: "🎁", label: "Regalos" },
-  { icon: "🐾", label: "Mascotas" },
-  { icon: "✈️", label: "Viajes" },
-  { icon: "🔧", label: "Mantenimiento" },
-  { icon: "💰", label: "Sueldo / Ingreso" },
-  { icon: "💼", label: "Negocio / Freelance" },
-  { icon: "📈", label: "Inversiones" },
-  { icon: "💳", label: "Pagos de Tarjeta/Deudas" },
-  { icon: "🏦", label: "Transferencias" },
-  { icon: "💸", label: "Otros" }
+  { icon: "🍕", label: "Comida" }, { icon: "🛒", label: "Super" }, { icon: "🏠", label: "Hogar" },
+  { icon: "💡", label: "Servicios" }, { icon: "🚕", label: "Transporte" }, { icon: "⛽", label: "Gasolina" },
+  { icon: "🛍️", label: "Compras" }, { icon: "💰", label: "Sueldo" }, { icon: "💸", label: "Otros" }
 ];
 
 export default function Home() {
   const API_URL = "https://finanzas-api-y9ke.onrender.com";  
   
-  // --- ESTADOS DE DATOS ---
+  // --- ESTADOS ---
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -82,26 +59,24 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [analysis, setAnalysis] = useState("");
 
-  // --- ESTADOS MODALES ---
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   
-  // Estados para formularios de modales
+  // Forms
   const [newAccName, setNewAccName] = useState("");
   const [newAccType, setNewAccType] = useState("Cash");
   const [newAccBalance, setNewAccBalance] = useState("0");
-
   const [newCatName, setNewCatName] = useState("");
   const [newCatType, setNewCatType] = useState("Expense");
   const [newCatIcon, setNewCatIcon] = useState("🏷️");
 
-  // ESTADO FECHA (FILTRO GLOBAL)
+  // Filtro Global Fecha
   const [filterDate, setFilterDate] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  // --- ESTADOS FORMULARIO PRINCIPAL ---
+  // Form Transacciones
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
   const [selCat, setSelCat] = useState("");
@@ -109,23 +84,22 @@ export default function Home() {
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]); 
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  // --- FUNCIONES DE FECHA ---
+  // --- HELPERS ---
   const getDisplayDate = (isoDate: string) => {
     if (!isoDate) return "";
     const [year, month] = isoDate.split("-");
     const date = new Date(parseInt(year), parseInt(month) - 1);
-    const monthName = date.toLocaleDateString('es-ES', { month: 'long' });
-    return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
+    const monthName = date.toLocaleDateString('es-ES', { month: 'short' }); // "Ene" en móvil, "Enero" en PC
+    return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`; // Ene 2026
   };
 
   const changeMonth = (offset: number) => {
     const [y, m] = filterDate.split("-");
     const date = new Date(parseInt(y), parseInt(m) - 1 + offset);
-    const newDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    setFilterDate(newDate);
+    setFilterDate(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
   };
 
-  // --- FETCH DATA ---
+  // --- FETCH ---
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -149,421 +123,300 @@ export default function Home() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const processChartData = (txs: Transaction[], cats: Category[]) => {
-    const expenses = txs.filter(t => {
-      const cat = cats.find(c => c.id === t.category_id);
-      return cat && cat.type === "Expense";
-    });
-    const groupedExpenses = expenses.reduce((acc: any, curr) => {
+    const expenses = txs.filter(t => cats.find(c => c.id === t.category_id)?.type === "Expense");
+    const grouped = expenses.reduce((acc: any, curr) => {
       const cat = cats.find(c => c.id === curr.category_id);
       if(cat) acc[cat.name] = (acc[cat.name] || 0) + curr.amount;
       return acc;
     }, {});
-    setPieData(Object.keys(groupedExpenses).map(key => ({ name: key, value: groupedExpenses[key] })));
+    setPieData(Object.keys(grouped).map(key => ({ name: key, value: grouped[key] })));
 
-    let totalIncome = 0, totalExpense = 0;
+    let income = 0, expense = 0;
     txs.forEach(t => {
-      const cat = cats.find(c => c.id === t.category_id);
-      if (cat?.type === "Income") totalIncome += t.amount;
-      if (cat?.type === "Expense") totalExpense += t.amount;
+      const type = cats.find(c => c.id === t.category_id)?.type;
+      if (type === "Income") income += t.amount;
+      if (type === "Expense") expense += t.amount;
     });
-    setBarData([
-      { name: "Ingresos", monto: totalIncome, fill: "#10B981" }, 
-      { name: "Gastos", monto: totalExpense, fill: "#EF4444" }   
-    ]);
+    setBarData([{ name: "Ing", monto: income, fill: "#10B981" }, { name: "Gas", monto: expense, fill: "#EF4444" }]);
   };
 
-  // --- FUNCIONES ACCIONES ---
+  // --- HANDLERS ---
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-        await axios.post(`${API_URL}/accounts/`, {
-            name: newAccName,
-            type: newAccType,
-            balance: parseFloat(newAccBalance)
-        });
-        alert("✅ Cuenta creada con éxito");
-        setShowAccountModal(false);
-        setNewAccName(""); setNewAccBalance("0"); 
-        fetchData(); 
-    } catch (error) { alert("Error al crear cuenta"); }
+        await axios.post(`${API_URL}/accounts/`, { name: newAccName, type: newAccType, balance: parseFloat(newAccBalance) });
+        setShowAccountModal(false); setNewAccName(""); fetchData(); 
+    } catch (error) { alert("Error"); }
   };
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-        await axios.post(`${API_URL}/categories/`, {
-            name: newCatName,
-            type: newCatType,
-            icon: newCatIcon,
-            budget_limit: 0
-        });
-        alert("✅ Categoría creada con éxito");
-        setShowCategoryModal(false);
-        setNewCatName(""); 
-        fetchData(); 
-    } catch (error) { alert("Error al crear categoría"); }
-  };
-
-  const startEditing = (tx: Transaction) => {
-    setEditingId(tx.id);
-    setAmount(tx.amount.toString());
-    setDesc(tx.description);
-    setSelCat(tx.category_id.toString());
-    setSelAcc(tx.account_id.toString());
-    setTxDate(tx.date.split("T")[0]); 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const cancelEditing = () => {
-    setEditingId(null);
-    setAmount(""); setDesc(""); setSelCat(""); setSelAcc("");
-    setTxDate(new Date().toISOString().split('T')[0]); 
+        await axios.post(`${API_URL}/categories/`, { name: newCatName, type: newCatType, icon: newCatIcon, budget_limit: 0 });
+        setShowCategoryModal(false); setNewCatName(""); fetchData(); 
+    } catch (error) { alert("Error"); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if(!selCat || !selAcc) { alert("Selecciona cuenta y categoría"); return; }
+    if(!selCat || !selAcc) return;
     try {
-        const payload = {
-            amount: parseFloat(amount),
-            description: desc,
-            account_id: parseInt(selAcc),
-            category_id: parseInt(selCat),
-            date: txDate
-        };
-
-        if (editingId) {
-            await axios.put(`${API_URL}/transactions/${editingId}`, payload);
-            alert("✅ Movimiento actualizado");
-            setEditingId(null);
-        } else {
-            await axios.post(`${API_URL}/transactions/`, payload);
-        }
-
-      setAmount(""); setDesc(""); 
-      setTxDate(new Date().toISOString().split('T')[0]);
-      fetchData(); 
-    } catch (error) { alert("Error al guardar"); }
+        const payload = { amount: parseFloat(amount), description: desc, account_id: parseInt(selAcc), category_id: parseInt(selCat), date: txDate };
+        editingId ? await axios.put(`${API_URL}/transactions/${editingId}`, payload) : await axios.post(`${API_URL}/transactions/`, payload);
+        setAmount(""); setDesc(""); setEditingId(null); fetchData(); 
+    } catch (error) { alert("Error"); }
   };
 
   const handleDelete = async (id: number) => {
-    if(!confirm("¿Borrar movimiento?")) return;
-    try {
-      await axios.delete(`${API_URL}/transactions/${id}`);
-      fetchData();
-    } catch (error) { alert("Error al borrar"); }
+    if(confirm("¿Borrar?")) { await axios.delete(`${API_URL}/transactions/${id}`); fetchData(); }
+  };
+
+  const startEditing = (tx: Transaction) => {
+    setEditingId(tx.id); setAmount(tx.amount.toString()); setDesc(tx.description);
+    setSelCat(tx.category_id.toString()); setSelAcc(tx.account_id.toString()); setTxDate(tx.date.split("T")[0]);
+    // Scroll suave hacia el formulario (especialmente útil en móvil)
+    document.getElementById("transaction-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
   const totalBalance = accounts.reduce((acc, curr) => acc + curr.balance, 0);
 
-  const downloadExcel = () => {
-    window.location.href = `${API_URL}/export`;
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-700 pb-12">
-      {/* --- NAVBAR ACTUALIZADO CON FLECHAS --- */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-                <span className="bg-slate-800 text-white w-8 h-8 flex items-center justify-center rounded-lg font-bold">F</span>
-                <h1 className="text-xl font-bold text-gray-800 hidden sm:block">Finanzas App</h1>
-            </div>
-            
-            {/* SELECTOR DE FECHA MEJORADO */}
-            <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-transparent hover:border-gray-300 transition">
-                <button onClick={() => changeMonth(-1)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white rounded-md transition" title="Mes anterior">
-                    ◀
-                </button>
-                <div className="relative group px-2 text-center min-w-[140px]">
-                    <div className="flex items-center justify-center gap-2 text-gray-700 text-sm font-bold cursor-pointer">
-                        <span>📅</span>
-                        <span className="capitalize">{getDisplayDate(filterDate)}</span>
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-700 pb-20 sm:pb-12">
+      
+      {/* --- NAVBAR RESPONSIVO --- */}
+      <nav className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
+            {/* IZQ: Logo + Fecha */}
+            <div className="flex items-center gap-2 sm:gap-4 flex-1">
+                <span className="bg-slate-800 text-white w-8 h-8 flex items-center justify-center rounded-lg font-bold flex-shrink-0">F</span>
+                
+                {/* Selector Compacto */}
+                <div className="flex items-center bg-gray-100 rounded-lg p-0.5 border border-transparent hover:border-gray-300 transition">
+                    <button onClick={() => changeMonth(-1)} className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md">◀</button>
+                    <div className="relative px-1 text-center min-w-[90px] sm:min-w-[120px]">
+                        <span className="text-xs sm:text-sm font-bold capitalize truncate block">{getDisplayDate(filterDate)}</span>
+                        <input type="month" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
                     </div>
-                    {/* Input invisible para selector nativo si se desea */}
-                    <input type="month" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title="Cambiar mes" />
+                    <button onClick={() => changeMonth(1)} className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md">▶</button>
                 </div>
-                <button onClick={() => changeMonth(1)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white rounded-md transition" title="Mes siguiente">
-                    ▶
-                </button>
             </div>
 
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden md:block">
-              <p className="text-xs text-gray-400 uppercase">Patrimonio Total</p>
-              <p className="font-bold text-gray-800 text-lg">${totalBalance.toLocaleString()}</p>
+            {/* DER: Acciones */}
+            <div className="flex items-center gap-2 sm:gap-4">
+                <div className="text-right hidden sm:block">
+                    <p className="text-[10px] text-gray-400 uppercase">Total</p>
+                    <p className="font-bold text-gray-800">${totalBalance.toLocaleString()}</p>
+                </div>
+                <button onClick={() => window.location.href=`${API_URL}/export`} className="bg-green-50 text-green-600 p-2 rounded-lg hover:bg-green-100 transition" title="Descargar Excel">📊</button>
+                <Link href="/settings" className="bg-gray-100 text-gray-600 p-2 rounded-lg hover:bg-gray-200 transition" title="Ajustes">⚙️</Link>
             </div>
-            <button onClick={downloadExcel} className="bg-green-100 hover:bg-green-200 text-green-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Descargar historial en Excel">
-             📊 <span className="hidden md:inline">Excel</span> </button>
-            <Link href="/settings" className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition">⚙️ Ajustes</Link>
-          </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         
-        {/* --- AI INSIGHT --- */}
-        <div className="mb-8 bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg flex items-start gap-4">
-            <div className="text-3xl bg-white/10 w-12 h-12 flex items-center justify-center rounded-full flex-shrink-0">🤖</div>
+        {/* --- AI INSIGHT (Compacto) --- */}
+        <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-4 text-white shadow-lg flex gap-3 items-center">
+            <div className="text-2xl">🤖</div>
+            <p className="text-sm font-medium opacity-90 leading-tight">{loading ? "Analizando..." : analysis || "Sin datos suficientes para análisis."}</p>
+        </div>
+
+        {/* --- TARJETA DE SALDO (Solo visible en Móvil) --- */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center sm:hidden">
             <div>
-                <h3 className="font-bold text-blue-200 text-xs uppercase tracking-wider mb-1">Análisis Inteligente</h3>
-                <p className="text-sm md:text-base font-medium leading-relaxed opacity-90">{loading ? "Analizando tus finanzas..." : analysis}</p>
+                <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Patrimonio Total</p>
+                <p className="text-3xl font-bold text-slate-800 mt-1">${totalBalance.toLocaleString()}</p>
             </div>
+            <div className="bg-blue-50 text-blue-600 p-2 rounded-full">💰</div>
         </div>
 
-        {/* --- ACCIONES RÁPIDAS --- */}
-        <div className="flex flex-wrap gap-4">
-            <button onClick={() => { setNewAccType("Cash"); setShowAccountModal(true); }} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition transform active:scale-95">
-                💳 Nueva Cuenta
+        {/* --- ACCIONES RÁPIDAS (Grid Adaptable) --- */}
+        <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+            <button onClick={() => { setNewAccType("Cash"); setShowAccountModal(true); }} className="flex-1 min-w-[120px] bg-blue-600 text-white px-3 py-3 rounded-xl font-bold shadow-md shadow-blue-100 text-sm flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 active:scale-95 transition">
+                <span>💳</span> <span className="whitespace-nowrap">Cuenta</span>
             </button>
-            <button onClick={() => { setNewAccType("Savings"); setShowAccountModal(true); }} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-emerald-200 transition transform active:scale-95">
-                🐷 Nueva Meta Ahorro
+            <button onClick={() => { setNewAccType("Savings"); setShowAccountModal(true); }} className="flex-1 min-w-[120px] bg-emerald-500 text-white px-3 py-3 rounded-xl font-bold shadow-md shadow-emerald-100 text-sm flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 active:scale-95 transition">
+                <span>🐷</span> <span className="whitespace-nowrap">Meta</span>
             </button>
-            <button onClick={() => setShowCategoryModal(true)} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-purple-200 transition transform active:scale-95">
-                🏷️ Nueva Categoría
+            <button onClick={() => setShowCategoryModal(true)} className="flex-1 min-w-[120px] bg-purple-600 text-white px-3 py-3 rounded-xl font-bold shadow-md shadow-purple-100 text-sm flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 active:scale-95 transition">
+                <span>🏷️</span> <span className="whitespace-nowrap">Categoría</span>
             </button>
         </div>
 
-        {/* SECCIÓN CUENTAS */}
-        <section>
-            <h2 className="text-lg font-bold text-gray-800 mb-4 px-1">Mis Cuentas</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-slate-800 text-white p-6 rounded-2xl shadow-lg flex flex-col justify-between md:hidden">
-                <span className="text-slate-400 text-sm font-medium">Patrimonio Total</span>
-                <span className="text-3xl font-bold">${totalBalance.toLocaleString()}</span>
-            </div>
-            {accounts.map(acc => (
-                <div key={acc.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-200 transition group relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-gray-50 to-white rounded-bl-full -mr-2 -mt-2 z-0"></div>
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-3">
-                            <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">{TRANSLATIONS[acc.type] || acc.type}</span>
-                            <span className="text-xs text-gray-300">Activa</span>
-                        </div>
-                        <h3 className="font-semibold text-gray-600 text-sm mb-1">{acc.name}</h3>
-                        <div className="text-2xl font-bold text-slate-800">${acc.balance.toLocaleString()}</div>
-                    </div>
-                </div>
-            ))}
-            </div>
-        </section>
-
-        {/* GRID PRINCIPAL */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* --- GRID DE CONTENIDO --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
             
-            {/* IZQUIERDA: FORMULARIO */}
-            <div className="lg:col-span-3 space-y-6">
-                <div className={`bg-white p-6 rounded-2xl shadow-sm border sticky top-24 z-30 transition-colors duration-300 ${editingId ? "border-blue-300 ring-2 ring-blue-50" : "border-gray-100"}`}>
-                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <span className={`p-1 rounded ${editingId ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"}`}>
-                            {editingId ? "✏️" : "📝"}
-                        </span> 
-                        {editingId ? "Editar Movimiento" : "Registrar"}
+            {/* --- 1. FORMULARIO (Orden cambiado en Desktop, pero visible arriba) --- */}
+            <div className="lg:col-span-3 order-1 lg:order-1" id="transaction-form">
+                <div className={`bg-white p-5 rounded-2xl shadow-sm border transition-colors duration-300 ${editingId ? "border-blue-300 ring-2 ring-blue-50" : "border-gray-100"}`}>
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 text-sm uppercase">
+                        {editingId ? "✏️ Editando..." : "📝 Nuevo Movimiento"}
                     </h3>
                     
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-3">
                         <div className="grid grid-cols-2 gap-2">
                              <div>
-                                <label className="text-xs font-bold text-gray-400 uppercase">Monto</label>
-                                <input type="number" placeholder="$0.00" className="w-full p-3 bg-gray-50 rounded-xl border-none outline-none focus:ring-2 focus:ring-blue-500 transition font-bold text-lg text-gray-700" value={amount} onChange={e => setAmount(e.target.value)} required />
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Monto</label>
+                                <input type="number" placeholder="$0" className="w-full p-2.5 bg-gray-50 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" value={amount} onChange={e => setAmount(e.target.value)} required />
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-gray-400 uppercase">Fecha</label>
-                                <input type="date" className="w-full p-3 bg-gray-50 rounded-xl border-none outline-none focus:ring-2 focus:ring-blue-500 transition text-sm text-gray-700 font-medium" value={txDate} onChange={e => setTxDate(e.target.value)} required />
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Fecha</label>
+                                <input type="date" className="w-full p-2.5 bg-gray-50 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-xs font-medium text-gray-600" value={txDate} onChange={e => setTxDate(e.target.value)} required />
                             </div>
                         </div>
 
-                        <div>
-                            <label className="text-xs font-bold text-gray-400 uppercase">Concepto</label>
-                            <input type="text" placeholder="Ej: Supermercado" className="w-full p-3 bg-gray-50 rounded-xl border-none outline-none focus:ring-2 focus:ring-blue-100 transition text-sm" value={desc} onChange={e => setDesc(e.target.value)} required />
-                        </div>
+                        <input type="text" placeholder="Concepto (Ej: Uber)" className="w-full p-2.5 bg-gray-50 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 text-sm" value={desc} onChange={e => setDesc(e.target.value)} required />
+                        
                         <div className="grid grid-cols-2 gap-2">
-                            <select className="p-3 bg-gray-50 rounded-xl outline-none text-sm w-full" value={selCat} onChange={e => setSelCat(e.target.value)} required>
+                            <select className="p-2.5 bg-gray-50 rounded-lg outline-none text-xs w-full truncate" value={selCat} onChange={e => setSelCat(e.target.value)} required>
                                 <option value="">Categoría</option>
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
                             </select>
-                            <select className="p-3 bg-gray-50 rounded-xl outline-none text-sm w-full" value={selAcc} onChange={e => setSelAcc(e.target.value)} required>
+                            <select className="p-2.5 bg-gray-50 rounded-lg outline-none text-xs w-full truncate" value={selAcc} onChange={e => setSelAcc(e.target.value)} required>
                                 <option value="">Cuenta</option>
                                 {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                             </select>
                         </div>
 
-                        <div className="flex gap-2">
-                            {editingId && (
-                                <button type="button" onClick={cancelEditing} className="w-1/3 bg-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-300 transition text-sm">Cancelar</button>
-                            )}
-                            <button className={`flex-1 text-white py-3 rounded-xl font-bold transition shadow-lg transform active:scale-95 ${editingId ? "bg-blue-600 hover:bg-blue-700 shadow-blue-200" : "bg-slate-800 hover:bg-slate-700 shadow-slate-200"}`}>
-                                {editingId ? "Actualizar" : "Guardar"}
+                        <div className="flex gap-2 pt-1">
+                            {editingId && <button type="button" onClick={() => { setEditingId(null); setAmount(""); setDesc(""); }} className="w-1/3 bg-gray-100 text-gray-500 py-2.5 rounded-lg font-bold text-xs">Cancelar</button>}
+                            <button className={`flex-1 text-white py-2.5 rounded-lg font-bold text-sm shadow-md transition ${editingId ? "bg-blue-600" : "bg-slate-800"}`}>
+                                {editingId ? "Actualizar" : "Registrar"}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
 
-            {/* CENTRO: GRÁFICOS */}
-            <div className="lg:col-span-6 space-y-6">
+            {/* --- 2. GRÁFICOS --- */}
+            <div className="lg:col-span-6 space-y-4 order-2 lg:order-2">
+                
+                {/* Metas (Compacto) */}
                 {goals.length > 0 && (
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-gray-800">🎯 Metas de Ahorro</h3>
-                            <Link href="/settings" className="text-xs text-blue-500 hover:underline">Ver todas</Link>
-                        </div>
-                        <div className="space-y-4">
-                            {goals.slice(0, 3).map(goal => {
-                                const progress = Math.min((goal.current_amount / goal.target_amount) * 100, 100);
-                                return (
-                                    <div key={goal.id}>
-                                        <div className="flex justify-between text-sm mb-1">
-                                            <span className="font-medium text-gray-700 flex items-center gap-2">{goal.icon} {goal.name}</span>
-                                            <span className="font-bold text-gray-900">{progress.toFixed(0)}%</span>
-                                        </div>
-                                        <div className="w-full bg-gray-100 rounded-full h-2">
-                                            <div className="bg-emerald-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${progress}%` }}></div>
-                                        </div>
+                     <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
+                        {goals.map(goal => {
+                             const progress = Math.min((goal.current_amount / goal.target_amount) * 100, 100);
+                             return (
+                                <div key={goal.id} className="min-w-[160px] bg-white p-3 rounded-xl border border-gray-100 shadow-sm snap-start">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className="text-xl">{goal.icon}</span>
+                                        <span className="text-xs font-bold text-emerald-600">{progress.toFixed(0)}%</span>
                                     </div>
-                                );
-                            })}
+                                    <p className="text-xs font-bold text-gray-700 truncate">{goal.name}</p>
+                                    <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+                                        <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                                    </div>
+                                </div>
+                             )
+                        })}
+                     </div>
+                )}
+
+                {/* Gráficos Stacked en Mobile */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-60 flex flex-col">
+                        <h3 className="font-bold text-gray-700 text-xs uppercase mb-2">Balance Mensual</h3>
+                        <div className="flex-1 w-full min-h-0 relative">
+                            {barData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={barData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                        <XAxis dataKey="name" tick={{fontSize: 10}} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{fontSize: 10}} axisLine={false} tickLine={false} />
+                                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '8px', fontSize: '12px'}} />
+                                        <Bar dataKey="monto" radius={[4, 4, 0, 0]} barSize={30} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : <p className="text-center text-xs text-gray-300 mt-10">Sin datos</p>}
                         </div>
                     </div>
-                )}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-64 flex flex-col">
-                    <h3 className="font-bold text-gray-800 mb-2">⚖️ Balance del Mes</h3>
-                    <div className="flex-1 w-full min-h-0 relative">
-                        {loading ? <div className="absolute inset-0 flex items-center justify-center text-gray-400">Cargando...</div> : transactions.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={barData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                                    <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" width={70} tick={{fontSize: 12}} />
-                                    <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
-                                    <Bar dataKey="monto" radius={[0, 4, 4, 0]} barSize={20} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : <div className="h-full flex flex-col items-center justify-center text-gray-400 text-sm"><p>Sin datos</p></div>}
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-80 flex flex-col">
-                    <h3 className="font-bold text-gray-800 mb-2">📊 Gastos por Categoría</h3>
-                    <div className="flex-1 w-full min-h-0 relative">
-                        {loading ? <div className="absolute inset-0 flex items-center justify-center text-gray-400">Cargando...</div> : pieData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                                {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />)}
-                            </Pie>
-                            <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
-                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        ) : <div className="h-full flex flex-col items-center justify-center text-gray-400 text-sm"><span className="text-2xl mb-2">📅</span><p>Sin gastos este mes</p></div>}
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-60 flex flex-col">
+                        <h3 className="font-bold text-gray-700 text-xs uppercase mb-2">Gastos por Categoría</h3>
+                        <div className="flex-1 w-full min-h-0 relative">
+                            {pieData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
+                                            {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />)}
+                                        </Pie>
+                                        <Tooltip contentStyle={{borderRadius: '8px', fontSize: '12px'}} />
+                                        <Legend wrapperStyle={{fontSize: '10px'}} iconSize={8} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : <p className="text-center text-xs text-gray-300 mt-10">Sin gastos</p>}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* DERECHA: HISTORIAL */}
-            <div className="lg:col-span-3 space-y-6">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-800 mb-4">⏱️ Historial Mes</h3>
-                    <div className="space-y-4">
-                        {transactions.slice().map(tx => {
+            {/* --- 3. HISTORIAL --- */}
+            <div className="lg:col-span-3 space-y-4 order-3 lg:order-3">
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 className="font-bold text-gray-800 mb-4 text-xs uppercase">Últimos Movimientos</h3>
+                    <div className="space-y-3">
+                        {transactions.map(tx => {
                             const cat = categories.find(c => c.id === tx.category_id);
                             const isExpense = cat?.type === "Expense";
-                            const txDateObj = new Date(tx.date);
-                            const dateStr = txDateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-
                             return (
-                                <div key={tx.id} className={`flex justify-between items-center group py-2 border-b border-gray-50 last:border-0 ${editingId === tx.id ? "bg-blue-50 rounded px-2 -mx-2" : ""}`}>
+                                <div key={tx.id} onClick={() => startEditing(tx)} className={`flex justify-between items-center py-2 border-b border-gray-50 last:border-0 cursor-pointer active:bg-gray-50 transition ${editingId === tx.id ? "bg-blue-50 -mx-2 px-2 rounded-lg" : ""}`}>
                                     <div className="flex items-center gap-3 overflow-hidden">
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${isExpense ? "bg-red-50 text-red-500" : "bg-green-50 text-green-500"}`}>
                                             {cat?.icon || "📄"}
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="font-bold text-gray-700 text-xs truncate">{tx.description}</p>
-                                            <p className="text-[10px] text-gray-400 capitalize">{dateStr}</p>
+                                            <p className="font-bold text-gray-700 text-xs truncate max-w-[120px]">{tx.description}</p>
+                                            <p className="text-[10px] text-gray-400">{new Date(tx.date).toLocaleDateString('es-ES', {day:'numeric', month:'short'})}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right flex items-center gap-2">
-                                        <div>
-                                            <p className={`font-bold text-sm ${isExpense ? "text-red-500" : "text-emerald-500"}`}>
-                                                {isExpense ? "-" : "+"}${tx.amount}
-                                            </p>
-                                        </div>
-                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                                            <button onClick={() => startEditing(tx)} className="p-1 text-gray-400 hover:text-blue-500 bg-gray-50 hover:bg-blue-50 rounded" title="Editar">✏️</button>
-                                            <button onClick={() => handleDelete(tx.id)} className="p-1 text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 rounded" title="Borrar">🗑️</button>
+                                    <div className="text-right">
+                                        <p className={`font-bold text-sm ${isExpense ? "text-red-500" : "text-emerald-500"}`}>
+                                            {isExpense ? "-" : "+"}${tx.amount}
+                                        </p>
+                                        <div className="flex justify-end gap-2 mt-1">
+                                            <button onClick={(e) => { e.stopPropagation(); handleDelete(tx.id); }} className="text-[10px] text-gray-300 hover:text-red-500">Borrar</button>
                                         </div>
                                     </div>
                                 </div>
                             );
                         })}
-                        {transactions.length === 0 && <p className="text-center text-gray-400 text-xs py-4">No hay datos para esta fecha</p>}
+                        {transactions.length === 0 && <p className="text-center text-gray-300 text-xs py-2">Nada por aquí</p>}
                     </div>
+                </div>
+                
+                {/* Resumen de Cuentas (Visible en Desktop abajo, Mobile arriba) */}
+                <div className="hidden lg:block bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                     <h3 className="font-bold text-gray-800 mb-3 text-xs uppercase">Mis Cuentas</h3>
+                     <div className="space-y-2">
+                        {accounts.map(acc => (
+                            <div key={acc.id} className="flex justify-between text-sm">
+                                <span className="text-gray-600 truncate max-w-[100px]">{acc.name}</span>
+                                <span className="font-bold text-gray-800">${acc.balance.toLocaleString()}</span>
+                            </div>
+                        ))}
+                     </div>
                 </div>
             </div>
 
         </div>
       </main>
 
-      {/* --- MODALES RENDERIZADOS AL FINAL --- */}
-      
-      {/* 1. MODAL CUENTA */}
-      <Modal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} title={newAccType === "Savings" ? "🐷 Nueva Meta de Ahorro" : "💳 Nueva Cuenta"}>
+      {/* --- MODALES --- */}
+      <Modal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} title={newAccType === "Savings" ? "🐷 Nueva Meta" : "💳 Nueva Cuenta"}>
         <form onSubmit={handleCreateAccount} className="space-y-4">
-            <div>
-                <label className="text-xs font-bold text-gray-400 uppercase">Nombre</label>
-                <input type="text" placeholder="Ej: Banco Azteca" className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 focus:border-blue-500 outline-none" value={newAccName} onChange={e => setNewAccName(e.target.value)} required />
-            </div>
-            <div>
-                <label className="text-xs font-bold text-gray-400 uppercase">Tipo</label>
-                <select className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none" value={newAccType} onChange={e => setNewAccType(e.target.value)}>
-                    <option value="Cash">Efectivo</option>
-                    <option value="Debit">Débito</option>
-                    <option value="Credit">Crédito</option>
-                    <option value="Savings">Ahorro</option>
-                    <option value="Investment">Inversión</option>
-                </select>
-            </div>
-            <div>
-                <label className="text-xs font-bold text-gray-400 uppercase">Saldo Inicial</label>
-                <input type="number" className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none" value={newAccBalance} onChange={e => setNewAccBalance(e.target.value)} />
-            </div>
-            <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">Crear Cuenta</button>
+            <div><label className="text-xs font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100" value={newAccName} onChange={e => setNewAccName(e.target.value)} required /></div>
+            <div><label className="text-xs font-bold text-gray-400 uppercase">Saldo Inicial</label><input type="number" className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100" value={newAccBalance} onChange={e => setNewAccBalance(e.target.value)} /></div>
+            <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Crear</button>
         </form>
       </Modal>
 
-      {/* 2. MODAL CATEGORÍA */}
       <Modal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="🏷️ Nueva Categoría">
         <form onSubmit={handleCreateCategory} className="space-y-4">
-            <div>
-                <label className="text-xs font-bold text-gray-400 uppercase">Nombre</label>
-                <input type="text" placeholder="Ej: Uber / Taxis" className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 focus:border-purple-500 outline-none" value={newCatName} onChange={e => setNewCatName(e.target.value)} required />
+            <div><label className="text-xs font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100" value={newCatName} onChange={e => setNewCatName(e.target.value)} required /></div>
+            <div className="grid grid-cols-2 gap-2">
+                <div><label className="text-xs font-bold text-gray-400 uppercase">Tipo</label><select className="w-full p-3 bg-gray-50 rounded-xl" value={newCatType} onChange={e => setNewCatType(e.target.value)}><option value="Expense">Gasto</option><option value="Income">Ingreso</option></select></div>
+                <div><label className="text-xs font-bold text-gray-400 uppercase">Icono</label><select className="w-full p-3 bg-gray-50 rounded-xl" value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)}>{CATEGORY_ICONS.map(i => <option key={i.icon} value={i.icon}>{i.icon} {i.label}</option>)}</select></div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase">Tipo</label>
-                    <select className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none" value={newCatType} onChange={e => setNewCatType(e.target.value)}>
-                        <option value="Expense">Gasto</option>
-                        <option value="Income">Ingreso</option>
-                    </select>
-                </div>
-                <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase">Icono</label>
-                    <select 
-                        className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none" 
-                        value={newCatIcon} 
-                        onChange={e => setNewCatIcon(e.target.value)}
-                    >
-                        {CATEGORY_ICONS.map((item) => (
-                            <option key={item.icon} value={item.icon}>
-                                {item.icon} {item.label}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-            <button className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold hover:bg-purple-700 transition">Crear Categoría</button>
+            <button className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold">Crear</button>
         </form>
       </Modal>
 

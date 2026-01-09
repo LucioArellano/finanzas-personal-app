@@ -1,24 +1,28 @@
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# 1. Buscamos si existe una URL de base de datos en la nube
-# (Render nos dará esta URL automáticamente cuando despleguemos)
-DATABASE_URL = os.getenv("DATABASE_URL")
+# 1. Intentamos leer la URL de la base de datos desde las variables de entorno
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
-# 2. Lógica de selección
-if DATABASE_URL:
-    # --- CONFIGURACIÓN PARA LA NUBE (PostgreSQL) ---
-    # Fix pequeño: SQLAlchemy a veces necesita que diga 'postgresql' en vez de 'postgres'
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-    
-    engine = create_engine(DATABASE_URL)
+# 2. Si no existe (estamos en local), usamos SQLite
+if not SQLALCHEMY_DATABASE_URL:
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+
+# 3. FIX IMPORTANTE PARA RENDER:
+# Render entrega la URL empezando con "postgres://", pero SQLAlchemy necesita "postgresql://"
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Configuración del motor
+if "sqlite" in SQLALCHEMY_DATABASE_URL:
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
 else:
-    # --- CONFIGURACIÓN LOCAL (SQLite) ---
-    SQLITE_URL = "sqlite:///./finance.db"
-    engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
+    # Configuración para PostgreSQL
+    engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

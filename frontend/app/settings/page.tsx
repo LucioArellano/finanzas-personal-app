@@ -24,7 +24,7 @@ export default function Settings() {
   // --- ESTADOS FORMULARIOS ---
   // Cuentas
   const [accName, setAccName] = useState("");
-  const [accType, setAccType] = useState("Debit");
+  const [accType, setAccType] = useState("Cash"); // Cambiado default a Efectivo (más común)
   const [accBalance, setAccBalance] = useState("0");
 
   // Categorías
@@ -42,12 +42,11 @@ export default function Settings() {
   // --- LISTAS DE DATOS ---
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]); // <--- Lista de Metas
+  const [goals, setGoals] = useState<Goal[]>([]);
 
   // --- CARGAR DATOS ---
   const fetchData = async () => {
     try {
-      // Agregamos la llamada a /goals/
       const [resCat, resAcc, resGoals] = await Promise.all([
         axios.get("https://finanzas-api-y9ke.onrender.com/categories/"),
         axios.get("https://finanzas-api-y9ke.onrender.com/accounts/"),
@@ -100,7 +99,7 @@ export default function Settings() {
     } catch (error) { alert("❌ No se puede borrar: Tiene gastos asociados."); }
   };
 
-  // --- LOGICA METAS (NUEVO) ---
+  // --- LOGICA METAS ---
   const handleCreateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -134,7 +133,7 @@ export default function Settings() {
           <Link href="/" className="text-sm font-medium text-gray-500 hover:text-gray-800 transition">⬅ Volver al Dashboard</Link>
         </div>
 
-        {/* GRID PRINCIPAL (Ahora 3 Columnas en pantallas grandes) */}
+        {/* GRID PRINCIPAL */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           
           {/* --- COLUMNA 1: CUENTAS --- */}
@@ -146,9 +145,15 @@ export default function Settings() {
               <form onSubmit={handleCreateAccount} className="space-y-5">
                 <input type="text" placeholder="Nombre (Ej: Banco X)" className="w-full p-2 border rounded-lg" value={accName} onChange={e => setAccName(e.target.value)} required />
                 <div className="grid grid-cols-2 gap-2">
+                    {/* --- AQUÍ ESTÁ EL CAMBIO --- */}
                     <select className="w-full p-2 border rounded-lg bg-white" value={accType} onChange={e => setAccType(e.target.value)}>
-                      <option value="Debit">Débito</option><option value="Cash">Efectivo</option><option value="Credit">Crédito</option>
+                      <option value="Cash">Efectivo</option>
+                      <option value="Debit">Débito</option>
+                      <option value="Savings">Ahorro</option>
+                      <option value="Credit">Crédito</option>
+                      <option value="Investment">Inversión</option>
                     </select>
+                    {/* --------------------------- */}
                     <input type="number" placeholder="Saldo Inicial" className="w-full p-2 border rounded-lg" value={accBalance} onChange={e => setAccBalance(e.target.value)} />
                 </div>
                 <button className="w-full bg-slate-800 text-white py-2 rounded-lg hover:bg-slate-700">Guardar Cuenta</button>
@@ -163,7 +168,15 @@ export default function Settings() {
                   <div key={acc.id} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded border border-transparent hover:border-gray-100 group">
                     <div>
                       <div className="text-sm font-medium text-gray-700">{acc.name}</div>
-                      <div className="text-xs text-gray-400">{acc.type} • Saldo: ${acc.balance}</div>
+                      {/* Traducimos visualmente el tipo si viene en inglés */}
+                      <div className="text-xs text-gray-400">
+                        {acc.type === 'Cash' ? 'Efectivo' : 
+                         acc.type === 'Debit' ? 'Débito' : 
+                         acc.type === 'Credit' ? 'Crédito' : 
+                         acc.type === 'Savings' ? 'Ahorro' : 
+                         acc.type === 'Investment' ? 'Inversión' : acc.type} 
+                        {' '}• Saldo: ${acc.balance}
+                      </div>
                     </div>
                     <button onClick={() => handleDeleteAccount(acc.id)} className="text-gray-300 hover:text-red-500 transition px-2" title="Borrar cuenta vacía">🗑️</button>
                   </div>
@@ -228,7 +241,7 @@ export default function Settings() {
             </section>
           </div>
 
-          {/* --- COLUMNA 3: METAS (NUEVO) --- */}
+          {/* --- COLUMNA 3: METAS --- */}
           <div className="space-y-6">
             <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative">
               <h2 className="font-semibold text-gray-800 mb-6 flex items-center gap-2">

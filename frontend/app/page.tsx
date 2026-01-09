@@ -414,28 +414,52 @@ export default function Home() {
                 <div><label className="text-xs font-bold text-gray-400 uppercase">Tipo</label><select className="w-full p-3 bg-gray-50 rounded-xl" value={newCatType} onChange={e => setNewCatType(e.target.value)}><option value="Expense">Gasto</option><option value="Income">Ingreso</option></select></div>
                 
                 {/* Nuevo Selector de Iconos Visual */}
-                <div className="relative">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1 mb-1 block">Icono</label>
-                  <button type="button" onClick={() => setShowIconPicker(!showIconPicker)} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 flex items-center justify-between transition">
-                    <span className="flex items-center gap-2 text-gray-700 font-bold"><span className="text-2xl">{newCatIcon}</span> <span className="text-sm font-normal text-gray-500">Elegir...</span></span>
-                    <span className="text-gray-400 text-xs">▼</span>
-                  </button>
+                {/* --- REEMPLAZA DESDE AQUÍ (Selector de Iconos) --- */}
+<div className="space-y-1">
+  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1 block">Icono</label>
+  
+  <button 
+    type="button" 
+    onClick={() => setShowIconPicker(!showIconPicker)} 
+    className={`w-full p-3 rounded-xl border flex items-center justify-between transition ${showIconPicker ? "bg-blue-50 border-blue-200 ring-2 ring-blue-100" : "bg-gray-50 border-gray-100 hover:bg-gray-100"}`}
+  >
+    <span className="flex items-center gap-2 text-gray-700 font-bold">
+      <span className="text-2xl">{newCatIcon}</span> 
+      <span className="text-sm font-normal text-gray-500">
+        {showIconPicker ? "Cerrar iconos" : "Cambiar icono..."}
+      </span>
+    </span>
+    <span className={`text-gray-400 text-xs transition-transform duration-200 ${showIconPicker ? "rotate-180" : ""}`}>▼</span>
+  </button>
 
-                  {showIconPicker && (
-                    <div className="absolute bottom-full right-0 mb-2 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 max-h-60 overflow-y-auto z-50 animate-in fade-in zoom-in-95 duration-200">
-                      {Object.entries(ICON_CATEGORIES).map(([categoryName, icons]) => (
-                        <div key={categoryName} className="mb-4">
-                          <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-wide border-b border-gray-100 pb-1">{categoryName}</h4>
-                          <div className="grid grid-cols-5 gap-2">
-                            {icons.map((icon) => (
-                              <button key={icon} type="button" onClick={() => { setNewCatIcon(icon); setShowIconPicker(false); }} className="text-xl p-1 hover:bg-purple-50 rounded-lg transition hover:scale-110">{icon}</button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+  {/* Menú Desplegable (INLINE - Ya no es 'absolute') */}
+  {showIconPicker && (
+    <div className="mt-2 bg-white border border-gray-200 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 shadow-inner">
+      <div className="max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+        {Object.entries(ICON_CATEGORIES).map(([categoryName, icons]) => (
+          <div key={categoryName} className="mb-5 last:mb-0">
+            <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-2 sticky top-0 bg-white py-1 border-b border-gray-100">
+              {categoryName}
+            </h4>
+            <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+              {icons.map((icon) => (
+                <button 
+                  key={icon} 
+                  type="button" 
+                  onClick={() => { setNewCatIcon(icon); setShowIconPicker(false); }} 
+                  className={`text-xl p-2 rounded-lg transition hover:scale-110 ${newCatIcon === icon ? "bg-blue-100 ring-2 ring-blue-300" : "hover:bg-gray-50"}`}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+
             </div>
             
             <button className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold">Crear</button>

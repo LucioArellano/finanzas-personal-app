@@ -437,24 +437,30 @@ export default function Home() {
     <div className="mt-2 bg-white border border-gray-200 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 shadow-inner">
       <div className="max-h-60 overflow-y-auto pr-1 custom-scrollbar">
         {Object.entries(ICON_CATEGORIES).map(([categoryName, icons]) => (
-          <div key={categoryName} className="mb-5 last:mb-0">
-            <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-2 sticky top-0 bg-white py-1 border-b border-gray-100">
-              {categoryName}
-            </h4>
-            <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-              {icons.map((icon) => (
-                <button 
-                  key={icon} 
-                  type="button" 
-                  onClick={() => { setNewCatIcon(icon); setShowIconPicker(false); }} 
-                  className={`text-xl p-2 rounded-lg transition hover:scale-110 ${newCatIcon === icon ? "bg-blue-100 ring-2 ring-blue-300" : "hover:bg-gray-50"}`}
-                >
-                  {icon}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+  <div key={categoryName} className="mb-5 last:mb-0">
+    {/* Título de la sección (Sticky) */}
+    <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-3 sticky top-0 bg-white py-2 border-b border-gray-100 z-10">
+      {categoryName}
+    </h4>
+    
+    {/* --- AQUÍ ESTÁ EL CAMBIO --- */}
+    {/* Antes: grid-cols-6 gap-2 */}
+    {/* Ahora: grid-cols-5 gap-4 (Menos columnas, más separación) */}
+    <div className="grid grid-cols-5 sm:grid-cols-8 gap-4 justify-items-center">
+      {icons.map((icon) => (
+        <button 
+          key={icon} 
+          type="button" 
+          onClick={() => { setNewCatIcon(icon); setShowIconPicker(false); }} 
+          // Agregamos 'w-10 h-10' para asegurar tamaño fijo y 'flex' para centrar
+          className={`w-10 h-10 text-xl flex items-center justify-center rounded-lg transition hover:scale-110 ${newCatIcon === icon ? "bg-blue-100 ring-2 ring-blue-300 text-blue-600" : "hover:bg-gray-100 text-gray-700"}`}
+        >
+          {icon}
+        </button>
+      ))}
+    </div>
+  </div>
+))}
       </div>
     </div>
   )}

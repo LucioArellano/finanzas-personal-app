@@ -409,3 +409,30 @@ def export_data(db: Session = Depends(get_db)):
     # 5. Enviar respuesta como descarga
     headers = {"Content-Disposition": "attachment; filename=mis_finanzas.xlsx"}
     return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers=headers)
+
+# Agrega esto en main.py (al final, antes de cerrar)
+
+@app.get("/check-db")
+def check_connection():
+    from database import engine
+    url_str = str(engine.url)
+    
+    # Ocultamos la contraseña por seguridad
+    safe_url = url_str.split("@")[-1] if "@" in url_str else url_str
+    
+    if "sqlite" in url_str:
+        return {
+            "ESTADO": "PELIGRO ⚠️",
+            "TIPO": "SQLite (Archivo temporal)",
+            "CONSECUENCIA": "Los datos SE BORRARÁN al reiniciar.",
+            "URL_DETECTADA": safe_url
+        }
+    elif "postgresql" in url_str:
+        return {
+            "ESTADO": "EXCELENTE ✅",
+            "TIPO": "PostgreSQL (Base de datos Nube)",
+            "CONSECUENCIA": "Los datos son ETERNOS.",
+            "URL_DETECTADA": safe_url
+        }
+    else:
+        return {"TIPO": "DESCONOCIDO", "URL": safe_url}

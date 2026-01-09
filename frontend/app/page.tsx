@@ -1,6 +1,6 @@
 // frontend/src/app/page.tsx
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { 
@@ -23,6 +23,8 @@ const TRANSLATIONS: Record<string, string> = {
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
 export default function Home() {
+  // Esta línea decide si usa la nube (cuando existe la variable) o tu PC (local)  
+  const API_URL = "https://finanzas-api-y9ke.onrender.com";  
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -56,16 +58,16 @@ export default function Home() {
     return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [year, month] = filterDate.split("-");
       const [resTx, resCat, resAcc, resGoals, resAnalysis] = await Promise.all([
-        axios.get(`http://127.0.0.1:8000/transactions/?month=${month}&year=${year}`),
-        axios.get("http://127.0.0.1:8000/categories/"),
-        axios.get("http://127.0.0.1:8000/accounts/"),
-        axios.get("http://127.0.0.1:8000/goals/"),
-        axios.get(`http://127.0.0.1:8000/analysis/?month=${month}&year=${year}`)
+        axios.get(`${API_URL}/transactions/?month=${month}&year=${year}`),
+        axios.get(`${API_URL}/categories/`),
+        axios.get(`${API_URL}/accounts/`),
+        axios.get(`${API_URL}/goals/`),
+        axios.get(`${API_URL}/analysis/?month=${month}&year=${year}`)
       ]);
       setTransactions(resTx.data);
       setCategories(resCat.data);
@@ -74,9 +76,9 @@ export default function Home() {
       setAnalysis(resAnalysis.data.message);
       processChartData(resTx.data, resCat.data);
     } catch (error) { console.error(error); } finally { setLoading(false); }
-  };
+  }, [filterDate]);
 
-  useEffect(() => { fetchData(); }, [filterDate]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const processChartData = (txs: Transaction[], cats: Category[]) => {
     const expenses = txs.filter(t => {
@@ -131,12 +133,12 @@ export default function Home() {
 
         if (editingId) {
             // MODO ACTUALIZAR (PUT)
-            await axios.put(`http://127.0.0.1:8000/transactions/${editingId}`, payload);
+            await axios.put(`${API_URL}/transactions/${editingId}`, payload);
             alert("✅ Movimiento actualizado");
             setEditingId(null); // Salir modo edición
         } else {
             // MODO CREAR (POST)
-            await axios.post("http://127.0.0.1:8000/transactions/", payload);
+            await axios.post(`${API_URL}/transactions/`, payload);
         }
 
       setAmount(""); setDesc(""); // Reset solo si no estamos editando (o tras editar)
@@ -147,7 +149,7 @@ export default function Home() {
   const handleDelete = async (id: number) => {
     if(!confirm("¿Borrar movimiento?")) return;
     try {
-      await axios.delete(`http://127.0.0.1:8000/transactions/${id}`);
+      await axios.delete(`${API_URL}/transactions/${id}`);
       fetchData();
     } catch (error) { alert("Error al borrar"); }
   };
@@ -156,7 +158,7 @@ export default function Home() {
 
   const downloadExcel = () => {
     // Al redirigir al navegador a esta URL, iniciará la descarga automáticamente
-    window.location.href = "http://127.0.0.1:8000/export";
+    window.location.href = `${API_URL}/export`;
   };
 
   return (

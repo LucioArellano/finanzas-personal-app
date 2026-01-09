@@ -407,71 +407,86 @@ export default function Home() {
 
       {/* 3. AQUI ESTÁ EL CAMBIO PRINCIPAL DEL MODAL CATEGORIA */}
       <Modal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="🏷️ Nueva Categoría">
-        <form onSubmit={handleCreateCategory} className="space-y-4">
-            <div><label className="text-xs font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100" value={newCatName} onChange={e => setNewCatName(e.target.value)} required /></div>
-            
-            <div className="grid grid-cols-2 gap-2">
-                <div><label className="text-xs font-bold text-gray-400 uppercase">Tipo</label><select className="w-full p-3 bg-gray-50 rounded-xl" value={newCatType} onChange={e => setNewCatType(e.target.value)}><option value="Expense">Gasto</option><option value="Income">Ingreso</option></select></div>
-                
-                {/* Nuevo Selector de Iconos Visual */}
-                {/* --- REEMPLAZA DESDE AQUÍ (Selector de Iconos) --- */}
-<div className="space-y-1">
-  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1 block">Icono</label>
-  
-  <button 
-    type="button" 
-    onClick={() => setShowIconPicker(!showIconPicker)} 
-    className={`w-full p-3 rounded-xl border flex items-center justify-between transition ${showIconPicker ? "bg-blue-50 border-blue-200 ring-2 ring-blue-100" : "bg-gray-50 border-gray-100 hover:bg-gray-100"}`}
-  >
-    <span className="flex items-center gap-2 text-gray-700 font-bold">
-      <span className="text-2xl">{newCatIcon}</span> 
-      <span className="text-sm font-normal text-gray-500">
-        {showIconPicker ? "Cerrar iconos" : "Cambiar icono..."}
-      </span>
-    </span>
-    <span className={`text-gray-400 text-xs transition-transform duration-200 ${showIconPicker ? "rotate-180" : ""}`}>▼</span>
-  </button>
-
-  {/* Menú Desplegable (INLINE - Ya no es 'absolute') */}
-  {showIconPicker && (
-    <div className="mt-2 bg-white border border-gray-200 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 shadow-inner">
-      <div className="max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-        {Object.entries(ICON_CATEGORIES).map(([categoryName, icons]) => (
-  <div key={categoryName} className="mb-5 last:mb-0">
-    {/* Título de la sección (Sticky) */}
-    <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-3 sticky top-0 bg-white py-2 border-b border-gray-100 z-10">
-      {categoryName}
-    </h4>
-    
-    {/* --- AQUÍ ESTÁ EL CAMBIO --- */}
-    {/* Antes: grid-cols-6 gap-2 */}
-    {/* Ahora: grid-cols-5 gap-4 (Menos columnas, más separación) */}
-    <div className="grid grid-cols-5 sm:grid-cols-8 gap-4 justify-items-center">
-      {icons.map((icon) => (
-        <button 
-          key={icon} 
-          type="button" 
-          onClick={() => { setNewCatIcon(icon); setShowIconPicker(false); }} 
-          // Agregamos 'w-10 h-10' para asegurar tamaño fijo y 'flex' para centrar
-          className={`w-10 h-10 text-xl flex items-center justify-center rounded-lg transition hover:scale-110 ${newCatIcon === icon ? "bg-blue-100 ring-2 ring-blue-300 text-blue-600" : "hover:bg-gray-100 text-gray-700"}`}
-        >
-          {icon}
-        </button>
-      ))}
-    </div>
-  </div>
-))}
+  <form onSubmit={handleCreateCategory} className="space-y-5">
+      
+      {/* 1. NOMBRE */}
+      <div>
+        <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Nombre</label>
+        <input 
+          className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none focus:ring-2 focus:ring-purple-100 transition" 
+          value={newCatName} 
+          onChange={e => setNewCatName(e.target.value)} 
+          placeholder="Ej: Gimnasio"
+          required 
+        />
       </div>
-    </div>
-  )}
-</div>
 
+      {/* 2. TIPO (Ahora ocupa todo el ancho) */}
+      <div>
+        <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Tipo</label>
+        <select 
+          className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none focus:ring-2 focus:ring-purple-100 transition appearance-none" 
+          value={newCatType} 
+          onChange={e => setNewCatType(e.target.value)}
+        >
+          <option value="Expense">Gasto 💸</option>
+          <option value="Income">Ingreso 💰</option>
+        </select>
+      </div>
+      
+      {/* 3. ICONO (Debajo y con ancho completo) */}
+      <div className="space-y-1">
+        <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Icono</label>
+        
+        <button 
+          type="button" 
+          onClick={() => setShowIconPicker(!showIconPicker)} 
+          className={`w-full p-3 rounded-xl border flex items-center justify-between transition ${showIconPicker ? "bg-purple-50 border-purple-200 ring-2 ring-purple-100" : "bg-gray-50 border-gray-100 hover:bg-gray-100"}`}
+        >
+          <span className="flex items-center gap-3 text-gray-700 font-bold">
+            <span className="text-3xl filter drop-shadow-sm">{newCatIcon}</span> 
+            <span className="text-sm font-normal text-gray-500">
+              {showIconPicker ? "Cerrar colección" : "Seleccionar icono..."}
+            </span>
+          </span>
+          <span className={`text-gray-400 text-xs transition-transform duration-200 ${showIconPicker ? "rotate-180" : ""}`}>▼</span>
+        </button>
+
+        {/* Panel Desplegable de Iconos */}
+        {showIconPicker && (
+          <div className="mt-2 bg-white border border-gray-200 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 shadow-inner">
+            <div className="max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+              {Object.entries(ICON_CATEGORIES).map(([categoryName, icons]) => (
+                <div key={categoryName} className="mb-6 last:mb-0">
+                  <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-3 sticky top-0 bg-white py-2 border-b border-gray-100 z-10">
+                    {categoryName}
+                  </h4>
+                  
+                  {/* GRID ANCHA: Ahora usamos 6 columnas porque tenemos todo el ancho */}
+                  <div className="grid grid-cols-6 sm:grid-cols-8 gap-3 justify-items-center">
+                    {icons.map((icon) => (
+                      <button 
+                        key={icon} 
+                        type="button" 
+                        onClick={() => { setNewCatIcon(icon); setShowIconPicker(false); }} 
+                        className={`w-11 h-11 text-2xl flex items-center justify-center rounded-xl transition hover:scale-110 hover:shadow-md ${newCatIcon === icon ? "bg-purple-100 ring-2 ring-purple-300 text-purple-700 shadow-sm scale-110" : "hover:bg-gray-50 text-gray-700 border border-transparent hover:border-gray-100"}`}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
-            
-            <button className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold">Crear</button>
-        </form>
-      </Modal>
-
+          </div>
+        )}
+      </div>
+      
+      <button className="w-full bg-purple-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-purple-200 hover:bg-purple-700 transition transform active:scale-95 mt-4">
+        Crear Categoría
+      </button>
+  </form>
+</Modal>
     </div>
   );
 }

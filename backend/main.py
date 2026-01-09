@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from io import BytesIO
 from fastapi.responses import StreamingResponse
@@ -12,8 +13,19 @@ from datetime import datetime
 from typing import Optional
 
 # --- 1. CONFIGURACIÓN DE BASE DE DATOS ---
-DATABASE_URL = "sqlite:///./finanzas.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Intentar leer la variable de Render. Si no existe, usar SQLite local.
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./finanzas.db")
+
+# Corrección para versiones nuevas de SQLAlchemy (postgres:// -> postgresql://)
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Argumentos de conexión: SQLite necesita check_same_thread, Postgres NO.
+connect_args = {}
+if "sqlite" in DATABASE_URL:
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

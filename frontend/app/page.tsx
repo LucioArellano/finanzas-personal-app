@@ -106,10 +106,10 @@ export default function Home() {
   const [desc, setDesc] = useState("");
   const [selCat, setSelCat] = useState("");
   const [selAcc, setSelAcc] = useState("");
-  // Estado para la fecha de la transacción (individual)
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]); 
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  // --- FUNCIONES DE FECHA ---
   const getDisplayDate = (isoDate: string) => {
     if (!isoDate) return "";
     const [year, month] = isoDate.split("-");
@@ -118,6 +118,14 @@ export default function Home() {
     return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
   };
 
+  const changeMonth = (offset: number) => {
+    const [y, m] = filterDate.split("-");
+    const date = new Date(parseInt(y), parseInt(m) - 1 + offset);
+    const newDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    setFilterDate(newDate);
+  };
+
+  // --- FETCH DATA ---
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -164,7 +172,7 @@ export default function Home() {
     ]);
   };
 
-  // --- FUNCIONES CREACIÓN RÁPIDA (MODALES) ---
+  // --- FUNCIONES ACCIONES ---
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -175,7 +183,7 @@ export default function Home() {
         });
         alert("✅ Cuenta creada con éxito");
         setShowAccountModal(false);
-        setNewAccName(""); setNewAccBalance("0"); // Reset
+        setNewAccName(""); setNewAccBalance("0"); 
         fetchData(); 
     } catch (error) { alert("Error al crear cuenta"); }
   };
@@ -191,19 +199,17 @@ export default function Home() {
         });
         alert("✅ Categoría creada con éxito");
         setShowCategoryModal(false);
-        setNewCatName(""); // Reset
+        setNewCatName(""); 
         fetchData(); 
-    } catch (error) { alert("Error al crear categoría (posible duplicado)"); }
+    } catch (error) { alert("Error al crear categoría"); }
   };
 
-  // --- FUNCIONES PRINCIPALES ---
   const startEditing = (tx: Transaction) => {
     setEditingId(tx.id);
     setAmount(tx.amount.toString());
     setDesc(tx.description);
     setSelCat(tx.category_id.toString());
     setSelAcc(tx.account_id.toString());
-    // Convertir la fecha ISO (YYYY-MM-DDTHH:mm:ss) a YYYY-MM-DD para el input
     setTxDate(tx.date.split("T")[0]); 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -211,7 +217,7 @@ export default function Home() {
   const cancelEditing = () => {
     setEditingId(null);
     setAmount(""); setDesc(""); setSelCat(""); setSelAcc("");
-    setTxDate(new Date().toISOString().split('T')[0]); // Reset a hoy
+    setTxDate(new Date().toISOString().split('T')[0]); 
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -223,7 +229,7 @@ export default function Home() {
             description: desc,
             account_id: parseInt(selAcc),
             category_id: parseInt(selCat),
-            date: txDate // <--- ENVIAMOS LA FECHA SELECCIONADA
+            date: txDate
         };
 
         if (editingId) {
@@ -235,7 +241,7 @@ export default function Home() {
         }
 
       setAmount(""); setDesc(""); 
-      setTxDate(new Date().toISOString().split('T')[0]); // Reset fecha
+      setTxDate(new Date().toISOString().split('T')[0]);
       fetchData(); 
     } catch (error) { alert("Error al guardar"); }
   };
@@ -256,6 +262,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-700 pb-12">
+      {/* --- NAVBAR ACTUALIZADO CON FLECHAS --- */}
       <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
@@ -263,14 +270,25 @@ export default function Home() {
                 <span className="bg-slate-800 text-white w-8 h-8 flex items-center justify-center rounded-lg font-bold">F</span>
                 <h1 className="text-xl font-bold text-gray-800 hidden sm:block">Finanzas App</h1>
             </div>
-            <div className="relative group">
-                <div className="flex items-center gap-2 bg-gray-100 text-gray-700 text-sm font-bold rounded-lg px-4 py-2 group-hover:bg-gray-200 transition cursor-pointer border border-transparent group-hover:border-gray-300">
-                    <span>📅</span>
-                    <span className="capitalize">{getDisplayDate(filterDate)}</span>
-                    <span className="text-xs text-gray-400">▼</span>
+            
+            {/* SELECTOR DE FECHA MEJORADO */}
+            <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-transparent hover:border-gray-300 transition">
+                <button onClick={() => changeMonth(-1)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white rounded-md transition" title="Mes anterior">
+                    ◀
+                </button>
+                <div className="relative group px-2 text-center min-w-[140px]">
+                    <div className="flex items-center justify-center gap-2 text-gray-700 text-sm font-bold cursor-pointer">
+                        <span>📅</span>
+                        <span className="capitalize">{getDisplayDate(filterDate)}</span>
+                    </div>
+                    {/* Input invisible para selector nativo si se desea */}
+                    <input type="month" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title="Cambiar mes" />
                 </div>
-                <input type="month" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title="Cambiar fecha" />
+                <button onClick={() => changeMonth(1)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white rounded-md transition" title="Mes siguiente">
+                    ▶
+                </button>
             </div>
+
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden md:block">
@@ -346,7 +364,6 @@ export default function Home() {
                     </h3>
                     
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* INPUTS DE MONTO Y FECHA AGRUPADOS */}
                         <div className="grid grid-cols-2 gap-2">
                              <div>
                                 <label className="text-xs font-bold text-gray-400 uppercase">Monto</label>
@@ -453,9 +470,7 @@ export default function Home() {
                         {transactions.slice().map(tx => {
                             const cat = categories.find(c => c.id === tx.category_id);
                             const isExpense = cat?.type === "Expense";
-                            // Parsear fecha local para mostrar día correcto
                             const txDateObj = new Date(tx.date);
-                            // Ajuste visual simple para fecha
                             const dateStr = txDateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 
                             return (

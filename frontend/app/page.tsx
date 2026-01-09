@@ -8,6 +8,24 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid 
 } from "recharts";
 
+// --- COMPONENTE MODAL (Ventana Emergente) ---
+const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
+          <h3 className="font-bold text-lg text-gray-800">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition text-2xl leading-none">&times;</button>
+        </div>
+        <div className="p-6">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- INTERFACES ---
 interface Account { id: number; name: string; type: string; balance: number; }
 interface Category { id: number; name: string; type: string; icon: string; }
@@ -23,8 +41,9 @@ const TRANSLATIONS: Record<string, string> = {
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
 export default function Home() {
-  // Esta línea decide si usa la nube (cuando existe la variable) o tu PC (local)  
   const API_URL = "https://finanzas-api-y9ke.onrender.com";  
+  
+  // --- ESTADOS DE DATOS ---
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -35,19 +54,30 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [analysis, setAnalysis] = useState("");
 
+  // --- ESTADOS MODALES (NUEVO) ---
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  
+  // Estados para formularios de modales
+  const [newAccName, setNewAccName] = useState("");
+  const [newAccType, setNewAccType] = useState("Cash");
+  const [newAccBalance, setNewAccBalance] = useState("0");
+
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatType, setNewCatType] = useState("Expense");
+  const [newCatIcon, setNewCatIcon] = useState("🏷️");
+
   // ESTADO FECHA
   const [filterDate, setFilterDate] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  // --- ESTADOS FORMULARIO ---
+  // --- ESTADOS FORMULARIO PRINCIPAL ---
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
   const [selCat, setSelCat] = useState("");
   const [selAcc, setSelAcc] = useState("");
-  
-  // NUEVO: Estado para saber si estamos editando
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const getDisplayDate = (isoDate: string) => {
@@ -104,14 +134,45 @@ export default function Home() {
     ]);
   };
 
-  // --- FUNCIONES EDICIÓN ---
+  // --- FUNCIONES CREACIÓN RÁPIDA (MODALES) ---
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+        await axios.post(`${API_URL}/accounts/`, {
+            name: newAccName,
+            type: newAccType,
+            balance: parseFloat(newAccBalance)
+        });
+        alert("✅ Cuenta creada con éxito");
+        setShowAccountModal(false);
+        setNewAccName(""); setNewAccBalance("0"); // Reset
+        fetchData(); // Recargar datos para que aparezca en la lista
+    } catch (error) { alert("Error al crear cuenta"); }
+  };
+
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+        await axios.post(`${API_URL}/categories/`, {
+            name: newCatName,
+            type: newCatType,
+            icon: newCatIcon,
+            budget_limit: 0
+        });
+        alert("✅ Categoría creada con éxito");
+        setShowCategoryModal(false);
+        setNewCatName(""); // Reset
+        fetchData(); // Recargar datos
+    } catch (error) { alert("Error al crear categoría (posible duplicado)"); }
+  };
+
+  // --- FUNCIONES PRINCIPALES ---
   const startEditing = (tx: Transaction) => {
     setEditingId(tx.id);
     setAmount(tx.amount.toString());
     setDesc(tx.description);
     setSelCat(tx.category_id.toString());
     setSelAcc(tx.account_id.toString());
-    // Scroll suave hacia arriba para ver el formulario
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -132,17 +193,15 @@ export default function Home() {
         };
 
         if (editingId) {
-            // MODO ACTUALIZAR (PUT)
             await axios.put(`${API_URL}/transactions/${editingId}`, payload);
             alert("✅ Movimiento actualizado");
-            setEditingId(null); // Salir modo edición
+            setEditingId(null);
         } else {
-            // MODO CREAR (POST)
             await axios.post(`${API_URL}/transactions/`, payload);
         }
 
-      setAmount(""); setDesc(""); // Reset solo si no estamos editando (o tras editar)
-      fetchData(); // Recargar datos
+      setAmount(""); setDesc(""); 
+      fetchData(); 
     } catch (error) { alert("Error al guardar"); }
   };
 
@@ -157,13 +216,12 @@ export default function Home() {
   const totalBalance = accounts.reduce((acc, curr) => acc + curr.balance, 0);
 
   const downloadExcel = () => {
-    // Al redirigir al navegador a esta URL, iniciará la descarga automáticamente
     window.location.href = `${API_URL}/export`;
   };
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-700 pb-12">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
+      <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -184,27 +242,37 @@ export default function Home() {
               <p className="text-xs text-gray-400 uppercase">Patrimonio Total</p>
               <p className="font-bold text-gray-800 text-lg">${totalBalance.toLocaleString()}</p>
             </div>
-            {/* Botón Excel */}
             <button onClick={downloadExcel} className="bg-green-100 hover:bg-green-200 text-green-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Descargar historial en Excel">
-    📊 <span className="hidden md:inline">Excel</span> </button>
+             📊 <span className="hidden md:inline">Excel</span> </button>
             <Link href="/settings" className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition">⚙️ Ajustes</Link>
           </div>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        
         {/* --- AI INSIGHT --- */}
-<div className="mb-8 bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg flex items-start gap-4">
-    <div className="text-3xl bg-white/10 w-12 h-12 flex items-center justify-center rounded-full flex-shrink-0">
-        🤖
-    </div>
-    <div>
-        <h3 className="font-bold text-blue-200 text-xs uppercase tracking-wider mb-1">Análisis Inteligente</h3>
-        <p className="text-sm md:text-base font-medium leading-relaxed opacity-90">
-            {loading ? "Analizando tus finanzas..." : analysis}
-        </p>
-    </div>
-</div>
+        <div className="mb-8 bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg flex items-start gap-4">
+            <div className="text-3xl bg-white/10 w-12 h-12 flex items-center justify-center rounded-full flex-shrink-0">🤖</div>
+            <div>
+                <h3 className="font-bold text-blue-200 text-xs uppercase tracking-wider mb-1">Análisis Inteligente</h3>
+                <p className="text-sm md:text-base font-medium leading-relaxed opacity-90">{loading ? "Analizando tus finanzas..." : analysis}</p>
+            </div>
+        </div>
+
+        {/* --- ACCIONES RÁPIDAS (NUEVO) --- */}
+        <div className="flex flex-wrap gap-4">
+            <button onClick={() => { setNewAccType("Cash"); setShowAccountModal(true); }} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition transform active:scale-95">
+                💳 Nueva Cuenta
+            </button>
+            <button onClick={() => { setNewAccType("Savings"); setShowAccountModal(true); }} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-emerald-200 transition transform active:scale-95">
+                🐷 Nueva Meta Ahorro
+            </button>
+            <button onClick={() => setShowCategoryModal(true)} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-purple-200 transition transform active:scale-95">
+                🏷️ Nueva Categoría
+            </button>
+        </div>
+
         {/* SECCIÓN CUENTAS */}
         <section>
             <h2 className="text-lg font-bold text-gray-800 mb-4 px-1">Mis Cuentas</h2>
@@ -226,7 +294,6 @@ export default function Home() {
                     </div>
                 </div>
             ))}
-            {accounts.length === 0 && <Link href="/settings" className="border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center p-6 text-gray-400 hover:border-blue-400 hover:text-blue-500 transition cursor-pointer">+ Agregar Cuenta</Link>}
             </div>
         </section>
 
@@ -263,12 +330,9 @@ export default function Home() {
                             </select>
                         </div>
 
-                        {/* Botones de Acción */}
                         <div className="flex gap-2">
                             {editingId && (
-                                <button type="button" onClick={cancelEditing} className="w-1/3 bg-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-300 transition text-sm">
-                                    Cancelar
-                                </button>
+                                <button type="button" onClick={cancelEditing} className="w-1/3 bg-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-300 transition text-sm">Cancelar</button>
                             )}
                             <button className={`flex-1 text-white py-3 rounded-xl font-bold transition shadow-lg transform active:scale-95 ${editingId ? "bg-blue-600 hover:bg-blue-700 shadow-blue-200" : "bg-slate-800 hover:bg-slate-700 shadow-slate-200"}`}>
                                 {editingId ? "Actualizar" : "Guardar"}
@@ -363,7 +427,6 @@ export default function Home() {
                                                 {isExpense ? "-" : "+"}${tx.amount}
                                             </p>
                                         </div>
-                                        {/* BOTONES ACCIÓN */}
                                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
                                             <button onClick={() => startEditing(tx)} className="p-1 text-gray-400 hover:text-blue-500 bg-gray-50 hover:bg-blue-50 rounded" title="Editar">✏️</button>
                                             <button onClick={() => handleDelete(tx.id)} className="p-1 text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 rounded" title="Borrar">🗑️</button>
@@ -379,6 +442,66 @@ export default function Home() {
 
         </div>
       </main>
+
+      {/* --- MODALES RENDERIZADOS AL FINAL --- */}
+      
+      {/* 1. MODAL CUENTA */}
+      <Modal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} title={newAccType === "Savings" ? "🐷 Nueva Meta de Ahorro" : "💳 Nueva Cuenta"}>
+        <form onSubmit={handleCreateAccount} className="space-y-4">
+            <div>
+                <label className="text-xs font-bold text-gray-400 uppercase">Nombre</label>
+                <input type="text" placeholder="Ej: Banco Azteca" className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 focus:border-blue-500 outline-none" value={newAccName} onChange={e => setNewAccName(e.target.value)} required />
+            </div>
+            <div>
+                <label className="text-xs font-bold text-gray-400 uppercase">Tipo</label>
+                <select className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none" value={newAccType} onChange={e => setNewAccType(e.target.value)}>
+                    <option value="Cash">Efectivo</option>
+                    <option value="Debit">Débito</option>
+                    <option value="Credit">Crédito</option>
+                    <option value="Savings">Ahorro</option>
+                    <option value="Investment">Inversión</option>
+                </select>
+            </div>
+            <div>
+                <label className="text-xs font-bold text-gray-400 uppercase">Saldo Inicial</label>
+                <input type="number" className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none" value={newAccBalance} onChange={e => setNewAccBalance(e.target.value)} />
+            </div>
+            <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">Crear Cuenta</button>
+        </form>
+      </Modal>
+
+      {/* 2. MODAL CATEGORÍA */}
+      <Modal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="🏷️ Nueva Categoría">
+        <form onSubmit={handleCreateCategory} className="space-y-4">
+            <div>
+                <label className="text-xs font-bold text-gray-400 uppercase">Nombre</label>
+                <input type="text" placeholder="Ej: Uber / Taxis" className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 focus:border-purple-500 outline-none" value={newCatName} onChange={e => setNewCatName(e.target.value)} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase">Tipo</label>
+                    <select className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none" value={newCatType} onChange={e => setNewCatType(e.target.value)}>
+                        <option value="Expense">Gasto</option>
+                        <option value="Income">Ingreso</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase">Icono</label>
+                    <select className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none" value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)}>
+                        <option value="🍕">🍕 Comida</option>
+                        <option value="🚕">🚕 Transporte</option>
+                        <option value="🏠">🏠 Hogar</option>
+                        <option value="💊">💊 Salud</option>
+                        <option value="🎮">🎮 Ocio</option>
+                        <option value="💸">💸 Otros</option>
+                        <option value="💰">💰 Sueldo</option>
+                    </select>
+                </div>
+            </div>
+            <button className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold hover:bg-purple-700 transition">Crear Categoría</button>
+        </form>
+      </Modal>
+
     </div>
   );
 }

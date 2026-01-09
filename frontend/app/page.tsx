@@ -13,7 +13,6 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-[100] p-0 sm:p-4">
-      {/* En móvil aparece desde abajo (bottom-sheet style), en PC es central */}
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in duration-200">
         <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
           <h3 className="font-bold text-lg text-gray-800">{title}</h3>
@@ -33,17 +32,19 @@ interface Category { id: number; name: string; type: string; icon: string; }
 interface Transaction { id: number; amount: number; description: string; date: string; category_id: number; account_id: number; }
 interface Goal { id: number; name: string; target_amount: number; current_amount: number; icon: string; }
 
-const TRANSLATIONS: Record<string, string> = {
-    "Cash": "Efectivo", "Debit": "Débito", "Credit": "Crédito",
-    "Savings": "Ahorro", "Investment": "Inversión", "Income": "Ingreso", "Expense": "Gasto"
-};
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
-const CATEGORY_ICONS = [
-  { icon: "🍕", label: "Comida" }, { icon: "🛒", label: "Super" }, { icon: "🏠", label: "Hogar" },
-  { icon: "💡", label: "Servicios" }, { icon: "🚕", label: "Transporte" }, { icon: "⛽", label: "Gasolina" },
-  { icon: "🛍️", label: "Compras" }, { icon: "💰", label: "Sueldo" }, { icon: "💸", label: "Otros" }
-];
+// 1. AQUI AGREGAMOS LA LISTA COMPLETA DE ICONOS
+const ICON_CATEGORIES = {
+  "Finanzas & Dinero": ["💸", "💰", "💳", "🏦", "📉", "📈", "💎", "🧾", "🪙", "💴", "💵", "💶"],
+  "Comida & Bebida": ["🍔", "🍕", "🥗", "🍣", "☕", "🍺", "🍷", "🛒", "🥦", "🍎", "🍩", "🌮", "🍰", "🍇"],
+  "Transporte & Auto": ["🚗", "🚌", "🚕", "✈️", "⛽", "🚲", "🔧", "🅿️", "🚨", "🏍️", "🚂", "🚢"],
+  "Hogar & Servicios": ["🏠", "💡", "💧", "🔥", "📡", "🛠️", "🛏️", "🧹", "🚿", "🚪", "🔌", "🗑️"],
+  "Ocio & Tecnología": ["🎉", "🎮", "📱", "💻", "🎬", "📚", "🎨", "🎵", "📷", "🎫", "🎲", "🎧"],
+  "Salud & Bienestar": ["💊", "🏥", "🏋️", "🧘", "🩺", "🦷", "👶", "💅", "💆", "🚑", "👓", "🧴"],
+  "Ropa & Compras": ["🛍️", "👕", "👗", "👟", "🕶️", "💍", "🎒", "🧢", "⌚", "👢"],
+  "Varios & Mascotas": ["🐶", "🐱", "🎁", "🎓", "📝", "🗳️", "🎯", "🏖️", "🐾", "💼", "🔧", "📦"]
+};
 
 export default function Home() {
   const API_URL = "https://finanzas-api-y9ke.onrender.com";  
@@ -62,6 +63,9 @@ export default function Home() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   
+  // 2. ESTADO PARA EL PICKER DE ICONOS
+  const [showIconPicker, setShowIconPicker] = useState(false);
+
   // Forms
   const [newAccName, setNewAccName] = useState("");
   const [newAccType, setNewAccType] = useState("Cash");
@@ -89,8 +93,8 @@ export default function Home() {
     if (!isoDate) return "";
     const [year, month] = isoDate.split("-");
     const date = new Date(parseInt(year), parseInt(month) - 1);
-    const monthName = date.toLocaleDateString('es-ES', { month: 'short' }); // "Ene" en móvil, "Enero" en PC
-    return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`; // Ene 2026
+    const monthName = date.toLocaleDateString('es-ES', { month: 'short' }); 
+    return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`; 
   };
 
   const changeMonth = (offset: number) => {
@@ -153,7 +157,7 @@ export default function Home() {
     e.preventDefault();
     try {
         await axios.post(`${API_URL}/categories/`, { name: newCatName, type: newCatType, icon: newCatIcon, budget_limit: 0 });
-        setShowCategoryModal(false); setNewCatName(""); fetchData(); 
+        setShowCategoryModal(false); setNewCatName(""); setShowIconPicker(false); fetchData(); 
     } catch (error) { alert("Error"); }
   };
 
@@ -174,7 +178,6 @@ export default function Home() {
   const startEditing = (tx: Transaction) => {
     setEditingId(tx.id); setAmount(tx.amount.toString()); setDesc(tx.description);
     setSelCat(tx.category_id.toString()); setSelAcc(tx.account_id.toString()); setTxDate(tx.date.split("T")[0]);
-    // Scroll suave hacia el formulario (especialmente útil en móvil)
     document.getElementById("transaction-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -186,11 +189,8 @@ export default function Home() {
       {/* --- NAVBAR RESPONSIVO --- */}
       <nav className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
-            {/* IZQ: Logo + Fecha */}
             <div className="flex items-center gap-2 sm:gap-4 flex-1">
                 <span className="bg-slate-800 text-white w-8 h-8 flex items-center justify-center rounded-lg font-bold flex-shrink-0">F</span>
-                
-                {/* Selector Compacto */}
                 <div className="flex items-center bg-gray-100 rounded-lg p-0.5 border border-transparent hover:border-gray-300 transition">
                     <button onClick={() => changeMonth(-1)} className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md">◀</button>
                     <div className="relative px-1 text-center min-w-[90px] sm:min-w-[120px]">
@@ -200,8 +200,6 @@ export default function Home() {
                     <button onClick={() => changeMonth(1)} className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md">▶</button>
                 </div>
             </div>
-
-            {/* DER: Acciones */}
             <div className="flex items-center gap-2 sm:gap-4">
                 <div className="text-right hidden sm:block">
                     <p className="text-[10px] text-gray-400 uppercase">Total</p>
@@ -215,13 +213,13 @@ export default function Home() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         
-        {/* --- AI INSIGHT (Compacto) --- */}
+        {/* --- AI INSIGHT --- */}
         <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-4 text-white shadow-lg flex gap-3 items-center">
             <div className="text-2xl">🤖</div>
             <p className="text-sm font-medium opacity-90 leading-tight">{loading ? "Analizando..." : analysis || "Sin datos suficientes para análisis."}</p>
         </div>
 
-        {/* --- TARJETA DE SALDO (Solo visible en Móvil) --- */}
+        {/* --- TARJETA SALDO MOVIL --- */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center sm:hidden">
             <div>
                 <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Patrimonio Total</p>
@@ -230,7 +228,7 @@ export default function Home() {
             <div className="bg-blue-50 text-blue-600 p-2 rounded-full">💰</div>
         </div>
 
-        {/* --- ACCIONES RÁPIDAS (Grid Adaptable) --- */}
+        {/* --- ACCIONES RÁPIDAS --- */}
         <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
             <button onClick={() => { setNewAccType("Cash"); setShowAccountModal(true); }} className="flex-1 min-w-[120px] bg-blue-600 text-white px-3 py-3 rounded-xl font-bold shadow-md shadow-blue-100 text-sm flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 active:scale-95 transition">
                 <span>💳</span> <span className="whitespace-nowrap">Cuenta</span>
@@ -246,7 +244,7 @@ export default function Home() {
         {/* --- GRID DE CONTENIDO --- */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
             
-            {/* --- 1. FORMULARIO (Orden cambiado en Desktop, pero visible arriba) --- */}
+            {/* 1. FORMULARIO */}
             <div className="lg:col-span-3 order-1 lg:order-1" id="transaction-form">
                 <div className={`bg-white p-5 rounded-2xl shadow-sm border transition-colors duration-300 ${editingId ? "border-blue-300 ring-2 ring-blue-50" : "border-gray-100"}`}>
                     <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 text-sm uppercase">
@@ -288,10 +286,9 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* --- 2. GRÁFICOS --- */}
+            {/* 2. GRÁFICOS */}
             <div className="lg:col-span-6 space-y-4 order-2 lg:order-2">
-                
-                {/* Metas (Compacto) */}
+                {/* Metas */}
                 {goals.length > 0 && (
                      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
                         {goals.map(goal => {
@@ -312,7 +309,7 @@ export default function Home() {
                      </div>
                 )}
 
-                {/* Gráficos Stacked en Mobile */}
+                {/* Gráficos */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-60 flex flex-col">
                         <h3 className="font-bold text-gray-700 text-xs uppercase mb-2">Balance Mensual</h3>
@@ -349,7 +346,7 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* --- 3. HISTORIAL --- */}
+            {/* 3. HISTORIAL */}
             <div className="lg:col-span-3 space-y-4 order-3 lg:order-3">
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <h3 className="font-bold text-gray-800 mb-4 text-xs uppercase">Últimos Movimientos</h3>
@@ -383,7 +380,6 @@ export default function Home() {
                     </div>
                 </div>
                 
-                {/* Resumen de Cuentas (Visible en Desktop abajo, Mobile arriba) */}
                 <div className="hidden lg:block bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                      <h3 className="font-bold text-gray-800 mb-3 text-xs uppercase">Mis Cuentas</h3>
                      <div className="space-y-2">
@@ -409,13 +405,39 @@ export default function Home() {
         </form>
       </Modal>
 
+      {/* 3. AQUI ESTÁ EL CAMBIO PRINCIPAL DEL MODAL CATEGORIA */}
       <Modal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="🏷️ Nueva Categoría">
         <form onSubmit={handleCreateCategory} className="space-y-4">
             <div><label className="text-xs font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100" value={newCatName} onChange={e => setNewCatName(e.target.value)} required /></div>
+            
             <div className="grid grid-cols-2 gap-2">
                 <div><label className="text-xs font-bold text-gray-400 uppercase">Tipo</label><select className="w-full p-3 bg-gray-50 rounded-xl" value={newCatType} onChange={e => setNewCatType(e.target.value)}><option value="Expense">Gasto</option><option value="Income">Ingreso</option></select></div>
-                <div><label className="text-xs font-bold text-gray-400 uppercase">Icono</label><select className="w-full p-3 bg-gray-50 rounded-xl" value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)}>{CATEGORY_ICONS.map(i => <option key={i.icon} value={i.icon}>{i.icon} {i.label}</option>)}</select></div>
+                
+                {/* Nuevo Selector de Iconos Visual */}
+                <div className="relative">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1 mb-1 block">Icono</label>
+                  <button type="button" onClick={() => setShowIconPicker(!showIconPicker)} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 flex items-center justify-between transition">
+                    <span className="flex items-center gap-2 text-gray-700 font-bold"><span className="text-2xl">{newCatIcon}</span> <span className="text-sm font-normal text-gray-500">Elegir...</span></span>
+                    <span className="text-gray-400 text-xs">▼</span>
+                  </button>
+
+                  {showIconPicker && (
+                    <div className="absolute bottom-full right-0 mb-2 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 max-h-60 overflow-y-auto z-50 animate-in fade-in zoom-in-95 duration-200">
+                      {Object.entries(ICON_CATEGORIES).map(([categoryName, icons]) => (
+                        <div key={categoryName} className="mb-4">
+                          <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-wide border-b border-gray-100 pb-1">{categoryName}</h4>
+                          <div className="grid grid-cols-5 gap-2">
+                            {icons.map((icon) => (
+                              <button key={icon} type="button" onClick={() => { setNewCatIcon(icon); setShowIconPicker(false); }} className="text-xl p-1 hover:bg-purple-50 rounded-lg transition hover:scale-110">{icon}</button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
             </div>
+            
             <button className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold">Crear</button>
         </form>
       </Modal>

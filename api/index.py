@@ -61,7 +61,12 @@ class Goal(Base):
     deadline = Column(String, nullable=True)
 
 # Crear las tablas automáticamente
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    print("Conexión exitosa y tablas verificadas")
+except Exception as e:
+    print(f"Aviso: No se pudo crear tablas (posiblemente ya existen): {e}")    
+
 
 # --- 3. ESQUEMAS PYDANTIC (VALIDACIÓN DE DATOS) ---
 class AccountCreate(BaseModel):

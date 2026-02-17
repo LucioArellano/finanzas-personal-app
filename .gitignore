@@ -1,17 +1,41 @@
-# --- Python ---
-__pycache__/
-*.py[cod]
-venv/
-.env
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# --- Node / Frontend ---
-frontend/node_modules/
-frontend/.next/
-frontend/out/
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
 .DS_Store
+*.pem
 
-# --- Base de datos (Opcional) ---
-# Si quieres guardar tus datos actuales en GitHub, borra la linea de abajo.
-# Si prefieres que quien baje el código empiece desde cero, déjala.
-*.db
-*.sqlite
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

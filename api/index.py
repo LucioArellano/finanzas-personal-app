@@ -13,16 +13,26 @@ from datetime import datetime
 from typing import Optional
 
 # --- 1. CONFIGURACIÓN DE BASE DE DATOS ---
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./finanzas.db")
+# Forzamos a que busque la variable. Si no existe, SQLALCHEMY_DATABASE_URL será None
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# Si estamos en Vercel pero NO detecta la variable, lanzamos un error claro
+if not SQLALCHEMY_DATABASE_URL:
+    # Esto aparecerá en tus logs de Vercel y nos dirá que la variable falta
+    print("⚠️ ADVERTENCIA: DATABASE_URL no encontrada, usando SQLite local (esto fallará en Vercel)")
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./finanzas.db"
 
+# Corrección de protocolo para SQLAlchemy 1.4+
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Configuramos connect_args SOLO si es estrictamente necesario (SQLite)
 connect_args = {}
-if "sqlite" in DATABASE_URL:
+if "sqlite" in SQLALCHEMY_DATABASE_URL:
     connect_args = {"check_same_thread": False}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+# Creación del engine LIMPIO
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -60,12 +70,13 @@ class Goal(Base):
     icon = Column(String, default="🎯")
     deadline = Column(String, nullable=True)
 
-# Crear las tablas automáticamente
+# Crear las tablas automáticamente (Línea 64 aprox)
 try:
     Base.metadata.create_all(bind=engine)
-    print("Conexión exitosa y tablas verificadas")
+    print("✅ Tablas verificadas exitosamente")
 except Exception as e:
-    print(f"Aviso: No se pudo crear tablas (posiblemente ya existen): {e}")    
+    # Si falla aquí, imprimirá el error real en los logs de Vercel
+    print(f"❌ Error al interactuar con la DB: {e}") 
 
 
 # --- 3. ESQUEMAS PYDANTIC (VALIDACIÓN DE DATOS) ---

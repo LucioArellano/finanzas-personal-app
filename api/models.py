@@ -1,7 +1,7 @@
 # backend/models.py
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from database import Base
+from api.database import Base
 from datetime import datetime
 
 # TABLA 1: CUENTAS (Bancos, Efectivo)

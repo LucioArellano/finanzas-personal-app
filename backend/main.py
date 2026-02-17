@@ -404,7 +404,7 @@ def export_data(db: Session = Depends(get_db)):
 
 @app.get("/check-db")
 def check_connection():
-    from database import engine
+    
     url_str = str(engine.url)
     safe_url = url_str.split("@")[-1] if "@" in url_str else url_str
     
